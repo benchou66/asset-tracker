@@ -1643,7 +1643,7 @@
 
   function fmt(n) {
     if (n >= 1e8) return 'NT$ '+(n/1e8).toFixed(2)+'億';
-    if (n >= 1e4) return 'NT$ '+(n/1e4).toFixed(1)+'萬';
+    if (n >= 1e4) return 'NT$ '+Math.round(n).toLocaleString('zh-TW');
     return 'NT$ '+n.toLocaleString('zh-TW');
   }
 
@@ -1687,13 +1687,13 @@
                 <div class="stock-code">${s.code}</div>
               </td>
               <td>${s.shares.toLocaleString()}</td>
-              <td>${(s.value/10000).toFixed(1)}萬</td>
+              <td>${Math.round(s.value).toLocaleString('zh-TW')}</td>
               <td class="col-hide">
                 <div style="color:var(--muted);font-size:0.7rem;margin-bottom:3px;">${weight}%</div>
                 <div class="pct-bar-wrap"><div class="pct-bar" style="width:${weight}%"></div></div>
               </td>
               <td style="color:${isPos?'var(--green)':'var(--red)'}">
-                ${isPos?'+':''}${(s.pnl/10000).toFixed(1)}萬
+                ${isPos?'+':''}${Math.abs(Math.round(s.pnl)).toLocaleString('zh-TW')}
               </td>
               <td>
                 <span style="color:${isPos?'var(--green)':'var(--red)'};font-weight:700;">
@@ -1706,10 +1706,10 @@
         <tfoot>
           <tr style="border-top:1px solid var(--border);">
             <td style="color:var(--muted);font-size:0.7rem;" colspan="2">合計</td>
-            <td style="color:var(--text);font-weight:700;">${(totalVal/10000).toFixed(1)}萬</td>
+            <td style="color:var(--text);font-weight:700;">${Math.round(totalVal).toLocaleString('zh-TW')}</td>
             <td class="col-hide"></td>
             <td style="color:var(--green);font-weight:700;">
-              ${'+'}${(holdings.stocks.reduce((s,r)=>s+r.pnl,0)/10000).toFixed(1)}萬
+              ${(()=>{const p=holdings.stocks.reduce((s,r)=>s+r.pnl,0);return (p>=0?'+':'')+Math.round(Math.abs(p)).toLocaleString('zh-TW')})()}
             </td>
             <td></td>
           </tr>
@@ -1918,7 +1918,7 @@
         cutout: '62%',
         plugins: {
           legend: { display: false },
-          tooltip: { callbacks: { label: ctx => ` ${ctx.label}：${(ctx.raw/10000).toFixed(1)}萬 (${(ctx.raw/total*100).toFixed(1)}%)` } }
+          tooltip: { callbacks: { label: ctx => ` ${ctx.label}：${Math.round(ctx.raw).toLocaleString('zh-TW')} (${(ctx.raw/total*100).toFixed(1)}%)` } }
         }
       }
     });
@@ -1953,7 +1953,7 @@
       },
       options: {
         responsive: true, maintainAspectRatio: false, cutout: '60%',
-        plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` ${ctx.label}：${(ctx.raw/10000).toFixed(1)}萬 (${(ctx.raw/total*100).toFixed(1)}%)` } } }
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` ${ctx.label}：${Math.round(ctx.raw).toLocaleString('zh-TW')} (${(ctx.raw/total*100).toFixed(1)}%)` } } }
       }
     });
 
