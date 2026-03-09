@@ -1199,66 +1199,21 @@
     const pasteText = document.getElementById('pasteInput').value.trim();
     if (!pasteText) return;
 
-    if (!_apiKey) {
-      openApiKeyModal();
-      document.getElementById('apiKeyStatus').textContent = '⚠ 請先設定 API Key';
-      document.getElementById('apiKeyStatus').style.color = 'var(--red)';
-      return;
-    }
-
     document.getElementById('ocrResult').style.display = 'none';
     document.getElementById('ocrLoading').style.display = 'block';
     document.getElementById('analyseBtn').disabled = true;
 
-    const prompt = `以下是從台股券商 App 複製的文字資料，請解析並回傳純 JSON（不含任何其他文字或 markdown）：
-
-${pasteText}
-
-請回傳以下格式：
-{
-  "total_asset": 總資產數字（純數字，無逗號，例如 13542133），
-  "return_rate": "報酬率字串，例如 '16.57%'，若無則 null",
-  "date": "日期 YYYY-MM-DD，若無法判斷則用今天 ${new Date().toISOString().slice(0,10)}",
-  "index": 加權指數數字或 null,
-  "notes": "補充備註",
-  "stocks": [
-    { "code": "股票代碼", "name": "股票名稱", "shares": 庫存股數數字, "value": 現值數字, "pnl": 損益數字（可負）, "pct": 報酬率數字（例如 20.24）}
-  ]
-}`;
+    // 短暫延遲讓 loading 動畫顯示
+    await new Promise(r => setTimeout(r, 300));
 
     try {
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': _apiKey,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-allow-browser': 'true'
-        },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 1500,
-          messages: [{ role: 'user', content: prompt }]
-        })
-      });
-
-      if (!res.ok) {
-        const errBody = await res.text();
-        throw new Error(`API 錯誤 ${res.status}: ${errBody.slice(0, 200)}`);
-      }
-
-      const data = await res.json();
-      if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
-
-      const text = data.content?.find(b => b.type === 'text')?.text || '';
-      const clean = text.replace(/```json|```/g, '').trim();
-      const parsed = JSON.parse(clean);
+      const parsed = parsePortfolioText(pasteText);
       ocrPending = parsed;
 
       document.getElementById('ocrLoading').style.display = 'none';
       document.getElementById('ocrResult').style.display = 'block';
       document.getElementById('ocrAmount').textContent = parsed.total_asset
-        ? 'NT$ ' + Number(parsed.total_asset).toLocaleString('zh-TW') : '⚠ 未讀取到';
+        ? 'NT$ ' + Number(parsed.total_asset).toLocaleString('zh-TW') : '⚠ 未讀取到總資產';
       document.getElementById('ocrDate').textContent = parsed.date || '⚠ 未偵測到日期';
       document.getElementById('ocrReturn').textContent =
         (parsed.return_rate || '—') + (parsed.stocks?.length ? `　${parsed.stocks.length} 檔個股` : '');
@@ -1281,6 +1236,78 @@ ${pasteText}
     document.getElementById('analyseBtn').disabled = false;
   }
 
+  // ─── 本地文字解析（不需要 API Key）───
+  function splitSharesValue(raw) {
+    const n = raw.replace(/,/g,'');
+    for (let i = n.length - 5; i >= 1; i--) {
+      const v = parseInt(n.slice(i));
+      const s = parseInt(n.slice(0, i));
+      if (v/s >= 5 && v/s <= 5000 && s >= 100) return [s, v];
+    }
+    return [null, null];
+  }
+
+  function parsePortfolioText(text) {
+    const t = text.replace(/,/g, '').replace(/\r/g, '');
+
+    // 解析總資產
+    let total_asset = null;
+    for (const p of [/總(?:資產|市值)[^\d]*(\d{5,})/, /資產(?:總值)?[^\d]*(\d{5,})/, /NT\$?\s*(\d{5,})/i]) {
+      const m = t.match(p);
+      if (m) { total_asset = parseInt(m[1]); break; }
+    }
+
+    // 解析報酬率
+    let return_rate = null;
+    const retM = t.match(/(?:總報酬率?|報酬率?)[^\d\-+]*([+\-]?\d+\.?\d*%)/);
+    if (retM) return_rate = retM[1];
+
+    // 解析日期
+    let date = new Date().toISOString().slice(0,10);
+    const dm = t.match(/(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})/);
+    if (dm && parseInt(dm[1]) >= 2020 && parseInt(dm[1]) <= 2035)
+      date = `${dm[1]}-${dm[2].padStart(2,'0')}-${dm[3].padStart(2,'0')}`;
+
+    // 解析加權指數
+    let index = null;
+    const idxM = t.match(/加權[^\d]*(\d{4,6})/);
+    if (idxM) index = parseInt(idxM[1]);
+
+    // 解析個股（支援手機複製的拼接格式）
+    const stocks = [];
+
+    // 先找所有代碼位置
+    const codeRe = /\d{4,6}[A-Z]?(?=[\u4e00-\u9fff])/g;
+    const positions = [];
+    let cm;
+    while ((cm = codeRe.exec(text)) !== null) positions.push({ code: cm[0], pos: cm.index });
+
+    for (let i = 0; i < positions.length; i++) {
+      const seg = text.slice(positions[i].pos, positions[i+1]?.pos ?? text.length);
+      const m = seg.match(/^[\d A-Z]+(.*?)現股([\d,]+)([+\-][\d,]+)([+\-]\d+\.?\d*)%/);
+      if (!m) continue;
+      const [shares, value] = splitSharesValue(m[2]);
+      if (shares && value) {
+        stocks.push({
+          code: positions[i].code,
+          name: m[1].trim(),
+          shares, value,
+          pnl: parseInt(m[3].replace(/,/g,'')),
+          pct: parseFloat(m[4])
+        });
+      }
+    }
+
+    // 備用：分行格式
+    if (stocks.length === 0) {
+      for (const line of text.split('\n').map(l => l.trim()).filter(Boolean)) {
+        const m = line.match(/^(\d{4,6}[A-Z]?)\s+(.+?)\s+(\d{3,})[\s,]+(\d{4,})[\s,]+([+\-]\d+)[\s,]+([+\-]?\d+\.?\d*)%?/);
+        if (m) stocks.push({ code: m[1], name: m[2].trim(), shares: parseInt(m[3]), value: parseInt(m[4]), pnl: parseInt(m[5]), pct: parseFloat(m[6]) });
+      }
+    }
+
+    return { total_asset, return_rate, date, index, notes: '', stocks };
+  }
   function confirmOcr() {
     if (!ocrPending) return;
     const amount = ocrPending.total_asset;
