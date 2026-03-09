@@ -739,7 +739,7 @@
 <div id="appWrapper">
 <div class="wrapper">
   <header>
-    <div class="logo">ASSET<span>/</span>TRACKER</div>
+    <div class="logo">ASSET<span>/</span>TRACKER <span style="font-size:0.6rem;color:var(--muted);letter-spacing:0.05em;">v1</span></div>
     <div style="display:flex;align-items:center;gap:14px;">
       <div class="header-date" id="headerDate"></div>
       <button class="btn-logout" onclick="doSignOut()">登出</button>
@@ -817,35 +817,40 @@
           <div class="panel-title">✏️ 新增資產記錄</div>
         </div>
         <div class="panel-body">
-          <div class="form-group">
-            <label class="form-label">日期</label>
-            <input type="text" class="form-input" id="manualDate" placeholder="例：2026/01/02" maxlength="10" />
+
+          <!-- 格式範本 -->
+          <div style="background:var(--surface2);border:1px dashed var(--border);border-radius:10px;padding:14px 16px;margin-bottom:16px;">
+            <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:10px;">貼上格式範本</div>
+            <pre id="entryTemplate" style="font-family:var(--font-mono);font-size:0.75rem;color:var(--text);line-height:1.9;margin:0;white-space:pre-wrap;">日期: 2026/01/02
+加權指數: 29349.81
+總市值: NTD 11,999,304
+總付出成本: NTD 11,173,758
+預估損益: +825,546
+預估報酬率: 7.39%</pre>
+            <button onclick="copyTemplate()" style="margin-top:10px;padding:6px 14px;background:transparent;border:1px solid var(--border);border-radius:7px;font-family:var(--font-mono);font-size:0.7rem;color:var(--muted);cursor:pointer;transition:all 0.2s;"
+              onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'"
+              onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">
+              📋 複製範本
+            </button>
           </div>
-          <div class="form-group">
-            <label class="form-label">總市值 (NT$)</label>
-            <input type="number" class="form-input" id="manualAmount" placeholder="例：13542133" min="0" />
+
+          <!-- 文字輸入框 -->
+          <textarea id="entryTextarea"
+            placeholder="貼上資料後點「解析並新增」..."
+            style="width:100%;min-height:160px;padding:12px;border:1.5px solid var(--border);border-radius:10px;font-family:var(--font-mono);font-size:0.78rem;color:var(--text);background:var(--surface2);box-sizing:border-box;resize:vertical;outline:none;line-height:1.8;transition:border-color 0.2s;"
+            onfocus="this.style.borderColor='var(--accent)'"
+            onblur="this.style.borderColor='var(--border)'"
+            oninput="previewParse()"></textarea>
+
+          <!-- 解析預覽 -->
+          <div id="entryPreview" style="display:none;margin-top:12px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px;font-family:var(--font-mono);font-size:0.75rem;line-height:2;"></div>
+
+          <div style="display:flex;gap:8px;margin-top:12px;">
+            <button class="btn" style="flex:1;" onclick="addManualEntry()">+ 解析並新增</button>
+            <button onclick="document.getElementById('entryTextarea').value='';document.getElementById('entryPreview').style.display='none';"
+              style="padding:10px 16px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;font-family:var(--font-mono);font-size:0.78rem;color:var(--muted);cursor:pointer;">清除</button>
           </div>
-          <div class="form-group">
-            <label class="form-label">總付出成本 (NT$)</label>
-            <input type="number" class="form-input" id="manualCost" placeholder="例：11600000" min="0" />
-          </div>
-          <div class="form-group">
-            <label class="form-label">預估損益 (NT$)</label>
-            <input type="number" class="form-input" id="manualPnl" placeholder="例：1942133（可為負數）" />
-          </div>
-          <div class="form-group">
-            <label class="form-label">預估報酬率 (%)</label>
-            <input type="number" class="form-input" id="manualReturnRate" placeholder="例：16.57" step="0.01" />
-          </div>
-          <div class="form-group">
-            <label class="form-label">加權指數</label>
-            <input type="number" class="form-input" id="manualIndex" placeholder="例：33599" min="0" />
-          </div>
-          <div class="form-group">
-            <label class="form-label">備註（選填）</label>
-            <input type="text" class="form-input" id="manualNote" placeholder="例：其他備註" />
-          </div>
-          <button class="btn" onclick="addManualEntry()">+ 新增記錄</button>
+
           <div style="display:flex;gap:8px;margin-top:10px;">
             <button class="btn-sm" onclick="loadSample()">↺ 還原範例資料</button>
             <button class="btn-sm" style="color:var(--red);border-color:rgba(220,38,38,0.3);" onclick="clearAll()">✕ 清除全部</button>
@@ -1130,37 +1135,91 @@
   if (window._fbReady) { boot(); }
   else { window.addEventListener('firebase-ready', boot); }
 
-  // ─── Manual Entry (資產記錄) ───
+  // ─── Text Parser ───
+  function parseEntryText(raw) {
+    const result = {};
+    const lines = raw.split('\n').map(l => l.trim()).filter(Boolean);
+    for (const line of lines) {
+      const col = line.indexOf(':');
+      if (col < 0) continue;
+      const key = line.slice(0, col).trim();
+      const val = line.slice(col + 1).trim();
+      const num = parseFloat(val.replace(/[,\s$NTDntd+]/g, ''));
+
+      if (/日期/.test(key)) {
+        result.date = val.replace(/\//g, '-').replace(/[^\d-]/g, '').slice(0, 10);
+      } else if (/加權/.test(key)) {
+        result.index = num;
+      } else if (/總市值|市值/.test(key)) {
+        result.amount = num;
+      } else if (/成本|付出/.test(key)) {
+        result.cost = num;
+      } else if (/損益/.test(key)) {
+        result.pnl = parseFloat(val.replace(/[,\s$NTDntd]/g, ''));
+      } else if (/報酬率|報酬/.test(key)) {
+        result.returnRate = parseFloat(val.replace(/[%\s]/g, ''));
+      }
+    }
+    return result;
+  }
+
+  function previewParse() {
+    const raw = document.getElementById('entryTextarea').value.trim();
+    const preview = document.getElementById('entryPreview');
+    if (!raw) { preview.style.display = 'none'; return; }
+
+    const p = parseEntryText(raw);
+    if (!p.date && !p.amount) { preview.style.display = 'none'; return; }
+
+    const rows = [
+      ['日期',       p.date || '⚠ 未偵測'],
+      ['加權指數',   p.index != null ? p.index.toLocaleString() : '—'],
+      ['總市值',     p.amount ? 'NT$ ' + Math.round(p.amount).toLocaleString('zh-TW') : '⚠ 未偵測'],
+      ['總付出成本', p.cost   ? 'NT$ ' + Math.round(p.cost).toLocaleString('zh-TW')   : '—'],
+      ['預估損益',   p.pnl != null ? (p.pnl >= 0 ? '+' : '') + Math.round(p.pnl).toLocaleString('zh-TW') : '—'],
+      ['預估報酬率', p.returnRate != null ? (p.returnRate >= 0 ? '+' : '') + p.returnRate + '%' : '—'],
+    ];
+
+    preview.style.display = 'block';
+    preview.innerHTML = rows.map(([k, v]) => {
+      const isWarn = v.startsWith('⚠');
+      const isPnlPos = k === '預估損益' && p.pnl != null && p.pnl >= 0;
+      const isPnlNeg = k === '預估損益' && p.pnl != null && p.pnl < 0;
+      const color = isWarn ? 'var(--red)' : isPnlPos ? 'var(--red)' : isPnlNeg ? 'var(--green)' : 'var(--accent)';
+      return `<div style="display:flex;justify-content:space-between;border-bottom:1px solid var(--border);padding:2px 0;">
+        <span style="color:var(--muted);">${k}</span>
+        <span style="color:${color};font-weight:600;">${v}</span>
+      </div>`;
+    }).join('');
+  }
+
+  function copyTemplate() {
+    const text = document.getElementById('entryTemplate').textContent;
+    navigator.clipboard.writeText(text).then(() => showToast('✓ 已複製範本'));
+  }
+
+  // ─── Manual Entry ───
   async function addManualEntry() {
-    const dateRaw     = document.getElementById('manualDate').value.trim();
-    const amount      = parseFloat(document.getElementById('manualAmount').value);
-    const cost        = parseFloat(document.getElementById('manualCost').value) || null;
-    const pnl         = parseFloat(document.getElementById('manualPnl').value);
-    const returnRate  = parseFloat(document.getElementById('manualReturnRate').value);
-    const indexVal    = parseFloat(document.getElementById('manualIndex').value);
-    const noteRaw     = document.getElementById('manualNote').value.trim();
+    const raw = document.getElementById('entryTextarea').value.trim();
+    if (!raw) { showToast('⚠ 請貼上資料'); return; }
 
-    if (!dateRaw) { showToast('⚠ 請輸入日期'); return; }
-    // parse YYYY/MM/DD or YYYY-MM-DD
-    const dateParsed = dateRaw.replace(/\//g, '-');
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateParsed)) { showToast('⚠ 日期格式錯誤，請輸入如 2026/01/02'); return; }
-    const date = dateParsed;
-    if (!amount || amount <= 0) { showToast('⚠ 請輸入有效的總市值'); return; }
+    const p = parseEntryText(raw);
 
-    // build note: prepend 加權XXXXX so vsindex chart can parse it
+    if (!p.date || !/^\d{4}-\d{2}-\d{2}$/.test(p.date)) { showToast('⚠ 日期格式錯誤，請確認如 2026/01/02'); return; }
+    if (!p.amount || p.amount <= 0) { showToast('⚠ 未偵測到總市值'); return; }
+
+    const entry = { date: p.date, amount: p.amount, note: '' };
     const noteParts = [];
-    if (!isNaN(indexVal) && indexVal > 0) noteParts.push(`加權${Math.round(indexVal)}`);
-    if (noteRaw) noteParts.push(noteRaw);
+    if (p.index != null) noteParts.push(`加權${p.index}`);
+    entry.note = noteParts.join(' ');
+    if (p.cost)                      entry.cost       = p.cost;
+    if (p.pnl != null)               entry.pnl        = p.pnl;
+    if (p.returnRate != null)        entry.returnRate = p.returnRate;
+    if (p.index != null)             entry.index      = p.index;
 
-    const entry = { date, amount, note: noteParts.join(' ') };
-    if (cost)              entry.cost       = cost;
-    if (!isNaN(pnl))       entry.pnl        = pnl;
-    if (!isNaN(returnRate)) entry.returnRate = returnRate;
-    if (!isNaN(indexVal) && indexVal > 0) entry.index = Math.round(indexVal);
-
-    const exists = entries.find(e => e.date === date);
+    const exists = entries.find(e => e.date === p.date);
     if (exists) {
-      if (!confirm(`日期 ${date} 已有記錄 (${fmt(exists.amount)})，是否覆蓋？`)) return;
+      if (!confirm(`日期 ${p.date} 已有記錄 (${fmt(exists.amount)})，是否覆蓋？`)) return;
       Object.assign(exists, entry);
     } else {
       entries.push(entry);
@@ -1170,8 +1229,8 @@
     await dbSaveEntries();
     render();
     renderAnalytics();
-    addLog('add', `手動新增：${date} ${fmt(amount)}${!isNaN(indexVal)&&indexVal>0 ? ` 加權${Math.round(indexVal)}` : ''}${!isNaN(returnRate) ? ` 報酬${returnRate}%` : ''}${noteRaw ? ' · ' + noteRaw : ''}`);
-    showToast(`✓ 已新增：${date} ${fmt(amount)}`);
+    addLog('add', `新增：${p.date} ${fmt(p.amount)}${p.index ? ` 加權${p.index}` : ''}${p.returnRate != null ? ` 報酬${p.returnRate}%` : ''}`);
+    showToast(`✓ 已新增：${p.date} ${fmt(p.amount)}`);
 
     ['totalValue','peakValue','drawdownValue','underwaterBadge'].forEach(id => {
       const card = document.getElementById(id)?.closest('.card');
@@ -1182,10 +1241,8 @@
       card.addEventListener('animationend', () => card.classList.remove('flash'), { once: true });
     });
 
-    // clear fields but keep date
-    ['manualAmount','manualCost','manualPnl','manualReturnRate','manualIndex','manualNote'].forEach(id => {
-      document.getElementById(id).value = '';
-    });
+    document.getElementById('entryTextarea').value = '';
+    document.getElementById('entryPreview').style.display = 'none';
   }
 
   // ─── Entry CRUD ───
