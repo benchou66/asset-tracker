@@ -1927,36 +1927,62 @@
     });
   }
 
-  // 5. 年化報酬率趨勢
+  // 5. 年化報酬率趨勢（以當年度最早一筆為基準）
   function renderAnnualChart() {
     if (entries.length < 2) return;
     const sorted = [...entries].sort((a,b) => a.date.localeCompare(b.date));
-    const first = sorted[0];
+
+    // 找每年最早一筆
+    const yearBase = {};
+    sorted.forEach(e => {
+      const yr = e.date.slice(0,4);
+      if (!yearBase[yr]) yearBase[yr] = e;
+    });
+
     const labels = [], data = [];
-    sorted.slice(1).forEach(e => {
-      const years = (new Date(e.date) - new Date(first.date)) / (365.25 * 86400000);
-      if (years < 0.08) return; // skip < 1 month
-      const cagr = (Math.pow(e.amount / first.amount, 1 / years) - 1) * 100;
+    sorted.forEach(e => {
+      const yr = e.date.slice(0,4);
+      const base = yearBase[yr];
+      if (e.date === base.date) return; // 跳過當年第一筆本身
+      const years = (new Date(e.date) - new Date(base.date)) / (365.25 * 86400000);
+      if (years < 0.05) return;
+      const cagr = (Math.pow(e.amount / base.amount, 1 / years) - 1) * 100;
       labels.push(e.date.slice(0,7));
       data.push(parseFloat(cagr.toFixed(2)));
     });
+
+    if (!labels.length) {
+      document.getElementById('chart-annual').innerHTML = '<div class="empty">資料不足，無法計算年化報酬率</div>';
+      return;
+    }
 
     chartInstances.annual = new Chart(document.getElementById('annualChart'), {
       type: 'line',
       data: {
         labels,
         datasets: [{
-          label: '年化報酬率 (CAGR) %',
+          label: '年化報酬率 (當年基準) %',
           data,
           borderColor: '#7c3aed',
           backgroundColor: 'rgba(124,58,237,0.08)',
           fill: true, tension: 0.4,
-          pointRadius: 4, pointBackgroundColor: '#fff', pointBorderColor: '#7c3aed', pointBorderWidth: 2
+          pointRadius: 4, pointBackgroundColor: '#fff',
+          pointBorderColor: '#7c3aed', pointBorderWidth: 2
         }]
       },
       options: {
         responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { labels: { font: { family: 'Space Mono', size: 11 }, color: '#64748b', boxWidth: 14 } }, tooltip: { callbacks: { label: ctx => ` CAGR：${ctx.raw > 0 ? '+' : ''}${ctx.raw}%` } } },
+        plugins: {
+          legend: { labels: { font: { family: 'Space Mono', size: 11 }, color: '#64748b', boxWidth: 14 } },
+          tooltip: { callbacks: {
+            label: ctx => ` CAGR：${ctx.raw > 0 ? '+' : ''}${ctx.raw}%`,
+            afterLabel: ctx => {
+              const yr = labels[ctx.dataIndex].slice(0,4);
+              const base = yearBase[yr];
+              return ` 基準：${base.date} ${fmt(base.amount)}`;
+            }
+          }}
+        },
         scales: {
           x: { grid: { display: false }, ticks: { font: { family: 'Space Mono', size: 10 }, color: '#64748b' } },
           y: { grid: { color: '#dde3ec' }, ticks: { font: { family: 'Space Mono', size: 10 }, color: '#64748b', callback: v => v + '%' } }
