@@ -1071,8 +1071,15 @@
 
   function doSignIn() {
     document.getElementById('loginErr').textContent = '';
+    const btn = document.querySelector('.btn-google');
+    btn.disabled = true;
+    btn.style.opacity = '0.6';
+    btn.innerHTML = btn.innerHTML.replace('使用 Google 帳號登入', '登入中...');
     window._fbSignIn().catch(err => {
       document.getElementById('loginErr').textContent = '登入失敗：' + err.message;
+      btn.disabled = false;
+      btn.style.opacity = '1';
+      btn.innerHTML = btn.innerHTML.replace('登入中...', '使用 Google 帳號登入');
     });
   }
   function doSignOut() {
