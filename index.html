@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
@@ -31,649 +32,653 @@
     overflow-x: hidden;
   }
 
-  /* subtle dot background */
-  body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background-image: radial-gradient(circle, #cbd5e1 1px, transparent 1px);
-    background-size: 28px 28px;
-    pointer-events: none;
-    z-index: 0;
-    opacity: 0.5;
-  }
+/* subtle dot background */
+body::before {
+content: ‘’;
+position: fixed;
+inset: 0;
+background-image: radial-gradient(circle, #cbd5e1 1px, transparent 1px);
+background-size: 28px 28px;
+pointer-events: none;
+z-index: 0;
+opacity: 0.5;
+}
 
-  .wrapper { position: relative; z-index: 1; max-width: 1280px; margin: 0 auto; padding: 24px 20px; }
+.wrapper { position: relative; z-index: 1; max-width: 1280px; margin: 0 auto; padding: 24px 20px; }
 
-  /* header */
-  header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 32px;
-    padding-bottom: 20px;
-    border-bottom: 1px solid var(--border);
-  }
-  .logo {
-    font-family: var(--font-mono);
-    font-size: 1.1rem;
-    letter-spacing: 0.15em;
-    color: var(--accent);
-    text-transform: uppercase;
-  }
-  .logo span { color: var(--muted); }
-  .header-date {
-    font-family: var(--font-mono);
-    font-size: 0.75rem;
-    color: var(--muted);
-  }
+/* header */
+header {
+display: flex;
+align-items: center;
+justify-content: space-between;
+margin-bottom: 32px;
+padding-bottom: 20px;
+border-bottom: 1px solid var(–border);
+}
+.logo {
+font-family: var(–font-mono);
+font-size: 1.1rem;
+letter-spacing: 0.15em;
+color: var(–accent);
+text-transform: uppercase;
+}
+.logo span { color: var(–muted); }
+.header-date {
+font-family: var(–font-mono);
+font-size: 0.75rem;
+color: var(–muted);
+}
 
-  /* summary cards */
-  .summary-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 16px;
-    margin-bottom: 28px;
-  }
-  .card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 20px;
-    position: relative;
-    overflow: hidden;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
-  }
-  .card::after {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 3px;
-    background: linear-gradient(90deg, var(--accent), var(--accent2));
-  }
-  .card-label {
-    font-size: 0.7rem;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--muted);
-    margin-bottom: 10px;
-    font-family: var(--font-mono);
-  }
-  .card-value {
-    font-family: var(--font-mono);
-    font-size: 1.6rem;
-    font-weight: 700;
-    color: var(--text);
-  }
-  .card-value.green { color: var(--green); }
-  .card-value.red { color: var(--red); }
-  .card-sub {
-    font-size: 0.75rem;
-    color: var(--muted);
-    margin-top: 4px;
-    font-family: var(--font-mono);
-  }
+/* summary cards */
+.summary-grid {
+display: grid;
+grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+gap: 16px;
+margin-bottom: 28px;
+}
+.card {
+background: var(–surface);
+border: 1px solid var(–border);
+border-radius: 12px;
+padding: 20px;
+position: relative;
+overflow: hidden;
+box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+.card::after {
+content: ‘’;
+position: absolute;
+top: 0; left: 0; right: 0;
+height: 3px;
+background: linear-gradient(90deg, var(–accent), var(–accent2));
+}
+.card-label {
+font-size: 0.7rem;
+letter-spacing: 0.12em;
+text-transform: uppercase;
+color: var(–muted);
+margin-bottom: 10px;
+font-family: var(–font-mono);
+}
+.card-value {
+font-family: var(–font-mono);
+font-size: 1.6rem;
+font-weight: 700;
+color: var(–text);
+}
+.card-value.green { color: var(–green); }
+.card-value.red { color: var(–red); }
+.card-sub {
+font-size: 0.75rem;
+color: var(–muted);
+margin-top: 4px;
+font-family: var(–font-mono);
+}
 
-  /* two-col layout */
-  .main-grid {
-    display: grid;
-    grid-template-columns: 1fr 360px;
-    gap: 20px;
-    margin-bottom: 24px;
-  }
-  @media (max-width: 900px) {
-    .main-grid { grid-template-columns: 1fr; }
-  }
+/* two-col layout */
+.main-grid {
+display: grid;
+grid-template-columns: 1fr 360px;
+gap: 20px;
+margin-bottom: 24px;
+}
+@media (max-width: 900px) {
+.main-grid { grid-template-columns: 1fr; }
+}
 
-  /* panel */
-  .panel {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    overflow: hidden;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
-  }
-  .panel-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 16px 20px;
-    border-bottom: 1px solid var(--border);
-    background: var(--surface2);
-  }
-  .panel-title {
-    font-family: var(--font-mono);
-    font-size: 0.8rem;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--accent);
-  }
-  .panel-body { padding: 20px; }
+/* panel */
+.panel {
+background: var(–surface);
+border: 1px solid var(–border);
+border-radius: 12px;
+overflow: hidden;
+box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+.panel-header {
+display: flex;
+align-items: center;
+justify-content: space-between;
+padding: 16px 20px;
+border-bottom: 1px solid var(–border);
+background: var(–surface2);
+}
+.panel-title {
+font-family: var(–font-mono);
+font-size: 0.8rem;
+letter-spacing: 0.1em;
+text-transform: uppercase;
+color: var(–accent);
+}
+.panel-body { padding: 20px; }
 
-  /* time tabs */
-  .tabs {
-    display: flex;
-    gap: 4px;
-    background: var(--border);
-    padding: 4px;
-    border-radius: 8px;
-  }
-  .tab {
-    padding: 5px 14px;
-    font-family: var(--font-mono);
-    font-size: 0.72rem;
-    letter-spacing: 0.08em;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    background: transparent;
-    color: var(--muted);
-    transition: all 0.2s;
-  }
-  .tab.active {
-    background: var(--accent);
-    color: #fff;
-    font-weight: 700;
-  }
-  .tab:hover:not(.active) { color: var(--text); background: rgba(255,255,255,0.6); }
+/* time tabs */
+.tabs {
+display: flex;
+gap: 4px;
+background: var(–border);
+padding: 4px;
+border-radius: 8px;
+}
+.tab {
+padding: 5px 14px;
+font-family: var(–font-mono);
+font-size: 0.72rem;
+letter-spacing: 0.08em;
+border: none;
+border-radius: 6px;
+cursor: pointer;
+background: transparent;
+color: var(–muted);
+transition: all 0.2s;
+}
+.tab.active {
+background: var(–accent);
+color: #fff;
+font-weight: 700;
+}
+.tab:hover:not(.active) { color: var(–text); background: rgba(255,255,255,0.6); }
 
-  /* chart container */
-  .chart-wrap {
-    position: relative;
-    height: 320px;
-    padding: 16px 0 8px;
-  }
+/* chart container */
+.chart-wrap {
+position: relative;
+height: 320px;
+padding: 16px 0 8px;
+}
 
-  /* add entry form */
-  .form-group { margin-bottom: 14px; }
-  .form-label {
-    display: block;
-    font-size: 0.7rem;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--muted);
-    margin-bottom: 6px;
-    font-family: var(--font-mono);
-  }
-  .form-input {
-    width: 100%;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 10px 14px;
-    color: var(--text);
-    font-family: var(--font-mono);
-    font-size: 0.85rem;
-    outline: none;
-    transition: border-color 0.2s;
-  }
-  .form-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
-  .btn {
-    width: 100%;
-    padding: 11px;
-    background: linear-gradient(135deg, var(--accent), var(--accent2));
-    border: none;
-    border-radius: 8px;
-    color: #fff;
-    font-family: var(--font-mono);
-    font-size: 0.82rem;
-    font-weight: 700;
-    letter-spacing: 0.1em;
-    cursor: pointer;
-    transition: opacity 0.2s, transform 0.1s;
-    text-transform: uppercase;
-  }
-  .btn:hover { opacity: 0.88; }
-  .btn:active { transform: scale(0.98); }
-  .btn-sm {
-    width: auto;
-    padding: 6px 14px;
-    font-size: 0.7rem;
-    background: var(--surface);
-    color: var(--muted);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    cursor: pointer;
-    font-family: var(--font-mono);
-    letter-spacing: 0.05em;
-    transition: all 0.2s;
-    margin-top: 8px;
-  }
-  .btn-sm:hover { border-color: var(--accent); color: var(--accent); background: rgba(37,99,235,0.05); }
-  .btn-danger {
-    background: transparent;
-    color: var(--red);
-    border: 1px solid rgba(220,38,38,0.3);
-    font-size: 0.65rem;
-    padding: 3px 8px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-family: var(--font-mono);
-    transition: all 0.2s;
-  }
-  .btn-danger:hover { background: rgba(220,38,38,0.08); }
+/* add entry form */
+.form-group { margin-bottom: 14px; }
+.form-label {
+display: block;
+font-size: 0.7rem;
+letter-spacing: 0.1em;
+text-transform: uppercase;
+color: var(–muted);
+margin-bottom: 6px;
+font-family: var(–font-mono);
+}
+.form-input {
+width: 100%;
+background: var(–surface2);
+border: 1px solid var(–border);
+border-radius: 8px;
+padding: 10px 14px;
+color: var(–text);
+font-family: var(–font-mono);
+font-size: 0.85rem;
+outline: none;
+transition: border-color 0.2s;
+}
+.form-input:focus { border-color: var(–accent); box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+.btn {
+width: 100%;
+padding: 11px;
+background: linear-gradient(135deg, var(–accent), var(–accent2));
+border: none;
+border-radius: 8px;
+color: #fff;
+font-family: var(–font-mono);
+font-size: 0.82rem;
+font-weight: 700;
+letter-spacing: 0.1em;
+cursor: pointer;
+transition: opacity 0.2s, transform 0.1s;
+text-transform: uppercase;
+}
+.btn:hover { opacity: 0.88; }
+.btn:active { transform: scale(0.98); }
+.btn-sm {
+width: auto;
+padding: 6px 14px;
+font-size: 0.7rem;
+background: var(–surface);
+color: var(–muted);
+border: 1px solid var(–border);
+border-radius: 6px;
+cursor: pointer;
+font-family: var(–font-mono);
+letter-spacing: 0.05em;
+transition: all 0.2s;
+margin-top: 8px;
+}
+.btn-sm:hover { border-color: var(–accent); color: var(–accent); background: rgba(37,99,235,0.05); }
+.btn-danger {
+background: transparent;
+color: var(–red);
+border: 1px solid rgba(220,38,38,0.3);
+font-size: 0.65rem;
+padding: 3px 8px;
+border-radius: 4px;
+cursor: pointer;
+font-family: var(–font-mono);
+transition: all 0.2s;
+}
+.btn-danger:hover { background: rgba(220,38,38,0.08); }
 
-  /* history list */
-  .history-list { display: flex; flex-direction: column; gap: 8px; }
-  .history-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 10px 14px;
-    background: var(--surface2);
-    border-radius: 8px;
-    border: 1px solid var(--border);
-    transition: border-color 0.2s, box-shadow 0.2s;
-  }
-  .history-item:hover { border-color: var(--accent); box-shadow: 0 2px 8px rgba(37,99,235,0.08); }
-  .history-left { display: flex; flex-direction: column; gap: 3px; }
-  .history-date {
-    font-family: var(--font-mono);
-    font-size: 0.68rem;
-    color: var(--muted);
-  }
-  .history-note { font-size: 0.78rem; color: var(--text); }
-  .history-right { display: flex; align-items: center; gap: 12px; }
-  .history-amount {
-    font-family: var(--font-mono);
-    font-size: 0.92rem;
-    font-weight: 700;
-  }
-  .history-amount.up { color: var(--green); }
-  .history-amount.down { color: var(--red); }
-  .history-amount.neutral { color: var(--text); }
+/* history list */
+.history-list { display: flex; flex-direction: column; gap: 8px; }
+.history-item {
+display: flex;
+align-items: center;
+justify-content: space-between;
+padding: 10px 14px;
+background: var(–surface2);
+border-radius: 8px;
+border: 1px solid var(–border);
+transition: border-color 0.2s, box-shadow 0.2s;
+}
+.history-item:hover { border-color: var(–accent); box-shadow: 0 2px 8px rgba(37,99,235,0.08); }
+.history-left { display: flex; flex-direction: column; gap: 3px; }
+.history-date {
+font-family: var(–font-mono);
+font-size: 0.68rem;
+color: var(–muted);
+}
+.history-note { font-size: 0.78rem; color: var(–text); }
+.history-right { display: flex; align-items: center; gap: 12px; }
+.history-amount {
+font-family: var(–font-mono);
+font-size: 0.92rem;
+font-weight: 700;
+}
+.history-amount.up { color: var(–green); }
+.history-amount.down { color: var(–red); }
+.history-amount.neutral { color: var(–text); }
 
-  /* drawdown panel */
-  .drawdown-stats {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-    margin-bottom: 16px;
-  }
-  .stat-box {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 12px 14px;
-  }
-  .stat-box-label {
-    font-family: var(--font-mono);
-    font-size: 0.65rem;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--muted);
-    margin-bottom: 6px;
-  }
-  .stat-box-value {
-    font-family: var(--font-mono);
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: var(--text);
-  }
+/* drawdown panel */
+.drawdown-stats {
+display: grid;
+grid-template-columns: 1fr 1fr;
+gap: 12px;
+margin-bottom: 16px;
+}
+.stat-box {
+background: var(–surface2);
+border: 1px solid var(–border);
+border-radius: 8px;
+padding: 12px 14px;
+}
+.stat-box-label {
+font-family: var(–font-mono);
+font-size: 0.65rem;
+letter-spacing: 0.1em;
+text-transform: uppercase;
+color: var(–muted);
+margin-bottom: 6px;
+}
+.stat-box-value {
+font-family: var(–font-mono);
+font-size: 1.1rem;
+font-weight: 700;
+color: var(–text);
+}
 
-  /* underwater badge */
-  .underwater-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 4px 10px;
-    border: 1px solid rgba(220,38,38,0.35);
-    border-radius: 20px;
-    background: rgba(220,38,38,0.07);
-    font-family: var(--font-mono);
-    font-size: 0.7rem;
-    color: var(--red);
-  }
-  .underwater-badge.safe {
-    border-color: rgba(5,150,105,0.35);
-    background: rgba(5,150,105,0.07);
-    color: var(--green);
-  }
-  .dot {
-    width: 6px; height: 6px;
-    border-radius: 50%;
-    background: currentColor;
-    animation: pulse 1.5s infinite;
-  }
-  @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.3; }
-  }
+/* underwater badge */
+.underwater-badge {
+display: inline-flex;
+align-items: center;
+gap: 6px;
+padding: 4px 10px;
+border: 1px solid rgba(220,38,38,0.35);
+border-radius: 20px;
+background: rgba(220,38,38,0.07);
+font-family: var(–font-mono);
+font-size: 0.7rem;
+color: var(–red);
+}
+.underwater-badge.safe {
+border-color: rgba(5,150,105,0.35);
+background: rgba(5,150,105,0.07);
+color: var(–green);
+}
+.dot {
+width: 6px; height: 6px;
+border-radius: 50%;
+background: currentColor;
+animation: pulse 1.5s infinite;
+}
+@keyframes pulse {
+0%, 100% { opacity: 1; }
+50% { opacity: 0.3; }
+}
 
-  /* upload slots */
-  .upload-slot {
-    border: 2px dashed var(--border);
-    border-radius: 10px;
-    padding: 16px 10px;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.25s;
-    background: var(--surface2);
-    position: relative;
-    min-height: 90px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 4px;
-    overflow: hidden;
-  }
-  .upload-slot:hover { border-color: var(--accent); background: rgba(37,99,235,0.04); }
-  .upload-slot.has-file { border-color: var(--accent); border-style: solid; padding: 0; }
-  .slot-icon { font-size: 1.4rem; }
-  .slot-text { font-size: 0.7rem; color: var(--muted); font-family: var(--font-mono); }
-  .upload-slot.has-file .slot-icon,
-  .upload-slot.has-file .slot-text { display: none; }
-  .slot-preview {
-    width: 100%; height: 100%;
-    object-fit: cover;
-    border-radius: 8px;
-    display: none;
-    position: absolute; inset: 0;
-  }
-  .upload-slot.has-file .slot-preview { display: block; }
-  .slot-check {
-    position: absolute; top: 5px; right: 5px;
-    background: var(--accent); color: #fff;
-    border-radius: 50%; width: 18px; height: 18px;
-    font-size: 10px; display: none;
-    align-items: center; justify-content: center;
-    font-weight: 700;
-  }
-  .upload-slot.has-file .slot-check { display: flex; }
+/* upload slots */
+.upload-slot {
+border: 2px dashed var(–border);
+border-radius: 10px;
+padding: 16px 10px;
+text-align: center;
+cursor: pointer;
+transition: all 0.25s;
+background: var(–surface2);
+position: relative;
+min-height: 90px;
+display: flex;
+flex-direction: column;
+align-items: center;
+justify-content: center;
+gap: 4px;
+overflow: hidden;
+}
+.upload-slot:hover { border-color: var(–accent); background: rgba(37,99,235,0.04); }
+.upload-slot.has-file { border-color: var(–accent); border-style: solid; padding: 0; }
+.slot-icon { font-size: 1.4rem; }
+.slot-text { font-size: 0.7rem; color: var(–muted); font-family: var(–font-mono); }
+.upload-slot.has-file .slot-icon,
+.upload-slot.has-file .slot-text { display: none; }
+.slot-preview {
+width: 100%; height: 100%;
+object-fit: cover;
+border-radius: 8px;
+display: none;
+position: absolute; inset: 0;
+}
+.upload-slot.has-file .slot-preview { display: block; }
+.slot-check {
+position: absolute; top: 5px; right: 5px;
+background: var(–accent); color: #fff;
+border-radius: 50%; width: 18px; height: 18px;
+font-size: 10px; display: none;
+align-items: center; justify-content: center;
+font-weight: 700;
+}
+.upload-slot.has-file .slot-check { display: flex; }
 
-  /* upload area (legacy, keep for drop zone compat) */
-  .upload-area {
-    border: 2px dashed var(--border);
-    border-radius: 12px;
-    padding: 32px 20px;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.3s;
-    background: var(--surface2);
-    margin-bottom: 16px;
-  }
-  .upload-area:hover, .upload-area.drag {
-    border-color: var(--accent);
-    background: rgba(37,99,235,0.04);
-  }
-  .upload-icon { font-size: 2rem; margin-bottom: 10px; }
-  .upload-text { font-size: 0.85rem; color: var(--muted); }
-  .upload-text strong { color: var(--accent); }
-  #fileInput { display: none; }
-  #uploadedImg {
-    max-width: 100%;
-    border-radius: 8px;
-    border: 1px solid var(--border);
-    display: none;
-    margin-top: 12px;
-  }
+/* upload area (legacy, keep for drop zone compat) */
+.upload-area {
+border: 2px dashed var(–border);
+border-radius: 12px;
+padding: 32px 20px;
+text-align: center;
+cursor: pointer;
+transition: all 0.3s;
+background: var(–surface2);
+margin-bottom: 16px;
+}
+.upload-area:hover, .upload-area.drag {
+border-color: var(–accent);
+background: rgba(37,99,235,0.04);
+}
+.upload-icon { font-size: 2rem; margin-bottom: 10px; }
+.upload-text { font-size: 0.85rem; color: var(–muted); }
+.upload-text strong { color: var(–accent); }
+#fileInput { display: none; }
+#uploadedImg {
+max-width: 100%;
+border-radius: 8px;
+border: 1px solid var(–border);
+display: none;
+margin-top: 12px;
+}
 
-  /* empty state */
-  .empty {
-    text-align: center;
-    padding: 40px 20px;
-    color: var(--muted);
-    font-size: 0.82rem;
-    font-family: var(--font-mono);
-  }
+/* empty state */
+.empty {
+text-align: center;
+padding: 40px 20px;
+color: var(–muted);
+font-size: 0.82rem;
+font-family: var(–font-mono);
+}
 
-  /* scrollable list */
-  .scroll-list { max-height: 280px; overflow-y: auto; padding-right: 4px; }
-  .scroll-list::-webkit-scrollbar { width: 4px; }
-  .scroll-list::-webkit-scrollbar-track { background: var(--surface2); border-radius: 2px; }
-  .scroll-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+/* scrollable list */
+.scroll-list { max-height: 280px; overflow-y: auto; padding-right: 4px; }
+.scroll-list::-webkit-scrollbar { width: 4px; }
+.scroll-list::-webkit-scrollbar-track { background: var(–surface2); border-radius: 2px; }
+.scroll-list::-webkit-scrollbar-thumb { background: var(–border); border-radius: 2px; }
 
-  @keyframes spin { to { transform: rotate(360deg); } }
-  .spin { display: inline-block; animation: spin 1s linear infinite; font-size: 1.4rem; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.spin { display: inline-block; animation: spin 1s linear infinite; font-size: 1.4rem; }
 
-  /* holdings table */
-  .htable { width: 100%; border-collapse: collapse; font-family: var(--font-mono); font-size: 0.78rem; }
-  .htable th {
-    text-align: left; padding: 8px 12px;
-    font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase;
-    color: var(--muted); border-bottom: 2px solid var(--border);
-    background: var(--surface2);
-  }
-  .htable th:not(:first-child) { text-align: right; }
-  .htable td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
-  .htable td:not(:first-child) { text-align: right; }
-  .htable tr:last-child td { border-bottom: none; }
-  .htable tr:hover td { background: rgba(37,99,235,0.03); }
-  .htable tfoot td { background: var(--surface2); font-weight: 700; }
-  .stock-code { color: var(--accent); font-size: 0.7rem; }
-  .stock-name { color: var(--text); font-size: 0.82rem; margin-bottom: 2px; }
-  .pct-bar-wrap { width: 60px; height: 4px; background: var(--border); border-radius: 2px; margin-top: 4px; display: inline-block; vertical-align: middle; }
-  .pct-bar { height: 100%; border-radius: 2px; background: var(--green); }
-  .pct-bar.neg { background: var(--red); }
+/* holdings table */
+.htable { width: 100%; border-collapse: collapse; font-family: var(–font-mono); font-size: 0.78rem; }
+.htable th {
+text-align: left; padding: 8px 12px;
+font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase;
+color: var(–muted); border-bottom: 2px solid var(–border);
+background: var(–surface2);
+}
+.htable th:not(:first-child) { text-align: right; }
+.htable td { padding: 10px 12px; border-bottom: 1px solid var(–border); vertical-align: middle; }
+.htable td:not(:first-child) { text-align: right; }
+.htable tr:last-child td { border-bottom: none; }
+.htable tr:hover td { background: rgba(37,99,235,0.03); }
+.htable tfoot td { background: var(–surface2); font-weight: 700; }
+.stock-code { color: var(–accent); font-size: 0.7rem; }
+.stock-name { color: var(–text); font-size: 0.82rem; margin-bottom: 2px; }
+.pct-bar-wrap { width: 60px; height: 4px; background: var(–border); border-radius: 2px; margin-top: 4px; display: inline-block; vertical-align: middle; }
+.pct-bar { height: 100%; border-radius: 2px; background: var(–green); }
+.pct-bar.neg { background: var(–red); }
 
-  .divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+.divider { border: none; border-top: 1px solid var(–border); margin: 20px 0; }
 
-  /* toast */
-  .toast {
-    position: fixed;
-    bottom: 24px;
-    right: 24px;
-    background: var(--surface);
-    border: 1px solid var(--accent);
-    border-radius: 10px;
-    padding: 12px 20px;
-    font-family: var(--font-mono);
-    font-size: 0.78rem;
-    color: var(--accent);
-    z-index: 999;
-    transform: translateY(80px);
-    opacity: 0;
-    transition: all 0.3s;
-    box-shadow: 0 4px 20px rgba(37,99,235,0.15);
-  }
-  .toast.show { transform: translateY(0); opacity: 1; }
+/* toast */
+.toast {
+position: fixed;
+bottom: 24px;
+right: 24px;
+background: var(–surface);
+border: 1px solid var(–accent);
+border-radius: 10px;
+padding: 12px 20px;
+font-family: var(–font-mono);
+font-size: 0.78rem;
+color: var(–accent);
+z-index: 999;
+transform: translateY(80px);
+opacity: 0;
+transition: all 0.3s;
+box-shadow: 0 4px 20px rgba(37,99,235,0.15);
+}
+.toast.show { transform: translateY(0); opacity: 1; }
 
-  @keyframes cardFlash {
-    0%   { box-shadow: 0 0 0 0 rgba(37,99,235,0.5); }
-    50%  { box-shadow: 0 0 0 8px rgba(37,99,235,0.15); background: rgba(37,99,235,0.04); }
-    100% { box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
-  }
-  .card.flash { animation: cardFlash 0.7s ease-out; }
+@keyframes cardFlash {
+0%   { box-shadow: 0 0 0 0 rgba(37,99,235,0.5); }
+50%  { box-shadow: 0 0 0 8px rgba(37,99,235,0.15); background: rgba(37,99,235,0.04); }
+100% { box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+}
+.card.flash { animation: cardFlash 0.7s ease-out; }
 
+/* section separator */
+.section-title {
+font-family: var(–font-mono);
+font-size: 0.7rem;
+letter-spacing: 0.15em;
+text-transform: uppercase;
+color: var(–muted);
+margin-bottom: 14px;
+display: flex;
+align-items: center;
+gap: 10px;
+}
+.section-title::after {
+content: ‘’;
+flex: 1;
+height: 1px;
+background: var(–border);
+}
 
-  /* section separator */
-  .section-title {
-    font-family: var(--font-mono);
-    font-size: 0.7rem;
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-    color: var(--muted);
-    margin-bottom: 14px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-  .section-title::after {
-    content: '';
-    flex: 1;
-    height: 1px;
-    background: var(--border);
-  }
+/* ── RWD ─────────────────────────────────────── */
 
-  /* ── RWD ─────────────────────────────────────── */
+/* Tablet (≤ 900px): main grid stack */
+@media (max-width: 900px) {
+.wrapper { padding: 16px 14px; }
+.main-grid { grid-template-columns: 1fr; }
+.summary-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+.card-value { font-size: 1.3rem; }
+.chart-wrap { height: 260px; }
+.drawdown-stats { grid-template-columns: repeat(2, 1fr); }
+.scroll-list { max-height: 220px; }
+}
 
-  /* Tablet (≤ 900px): main grid stack */
-  @media (max-width: 900px) {
-    .wrapper { padding: 16px 14px; }
-    .main-grid { grid-template-columns: 1fr; }
-    .summary-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
-    .card-value { font-size: 1.3rem; }
-    .chart-wrap { height: 260px; }
-    .drawdown-stats { grid-template-columns: repeat(2, 1fr); }
-    .scroll-list { max-height: 220px; }
-  }
+/* Mobile (≤ 600px): single column everything */
+@media (max-width: 600px) {
+.wrapper { padding: 12px 10px; }
 
-  /* Mobile (≤ 600px): single column everything */
-  @media (max-width: 600px) {
-    .wrapper { padding: 12px 10px; }
+```
+/* header */
+header { flex-direction: column; align-items: flex-start; gap: 4px; margin-bottom: 20px; padding-bottom: 14px; }
+.header-date { font-size: 0.68rem; }
 
-    /* header */
-    header { flex-direction: column; align-items: flex-start; gap: 4px; margin-bottom: 20px; padding-bottom: 14px; }
-    .header-date { font-size: 0.68rem; }
+/* summary cards: 2×2 grid */
+.summary-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 16px; }
+.card { padding: 14px 12px; }
+.card-label { font-size: 0.6rem; margin-bottom: 6px; }
+.card-value { font-size: 1.1rem; }
+.card-sub { font-size: 0.65rem; }
 
-    /* summary cards: 2×2 grid */
-    .summary-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 16px; }
-    .card { padding: 14px 12px; }
-    .card-label { font-size: 0.6rem; margin-bottom: 6px; }
-    .card-value { font-size: 1.1rem; }
-    .card-sub { font-size: 0.65rem; }
+/* panels */
+.panel-header { padding: 12px 14px; flex-wrap: wrap; gap: 8px; }
+.panel-title { font-size: 0.72rem; }
+.panel-body { padding: 14px; }
 
-    /* panels */
-    .panel-header { padding: 12px 14px; flex-wrap: wrap; gap: 8px; }
-    .panel-title { font-size: 0.72rem; }
-    .panel-body { padding: 14px; }
+/* chart */
+.chart-wrap { height: 200px; }
+.drawdown-stats { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+.stat-box { padding: 10px 10px; }
+.stat-box-label { font-size: 0.58rem; }
+.stat-box-value { font-size: 0.95rem; }
 
-    /* chart */
-    .chart-wrap { height: 200px; }
-    .drawdown-stats { grid-template-columns: repeat(2, 1fr); gap: 8px; }
-    .stat-box { padding: 10px 10px; }
-    .stat-box-label { font-size: 0.58rem; }
-    .stat-box-value { font-size: 0.95rem; }
+/* upload slots: stack vertically on very small screens */
+.upload-slots-grid { grid-template-columns: 1fr !important; }
 
-    /* upload slots: stack vertically on very small screens */
-    .upload-slots-grid { grid-template-columns: 1fr !important; }
+/* history */
+.history-item { flex-direction: column; align-items: flex-start; gap: 8px; }
+.history-right { width: 100%; justify-content: space-between; }
+.history-amount { font-size: 0.85rem; }
+.scroll-list { max-height: 200px; }
 
-    /* history */
-    .history-item { flex-direction: column; align-items: flex-start; gap: 8px; }
-    .history-right { width: 100%; justify-content: space-between; }
-    .history-amount { font-size: 0.85rem; }
-    .scroll-list { max-height: 200px; }
+/* holdings table: hide佔比 bar col, compress */
+.htable { font-size: 0.72rem; }
+.htable th, .htable td { padding: 7px 7px; }
+.htable .col-hide { display: none; }
+.pct-bar-wrap { width: 40px; }
+.stock-name { font-size: 0.75rem; }
 
-    /* holdings table: hide佔比 bar col, compress */
-    .htable { font-size: 0.72rem; }
-    .htable th, .htable td { padding: 7px 7px; }
-    .htable .col-hide { display: none; }
-    .pct-bar-wrap { width: 40px; }
-    .stock-name { font-size: 0.75rem; }
+/* toast: full-width bottom */
+.toast { left: 12px; right: 12px; bottom: 12px; text-align: center; }
 
-    /* toast: full-width bottom */
-    .toast { left: 12px; right: 12px; bottom: 12px; text-align: center; }
+/* tabs */
+.tab { padding: 5px 10px; font-size: 0.68rem; }
 
-    /* tabs */
-    .tab { padding: 5px 10px; font-size: 0.68rem; }
+/* btn-sm */
+.btn-sm { padding: 5px 10px; font-size: 0.65rem; }
+```
 
-    /* btn-sm */
-    .btn-sm { padding: 5px 10px; font-size: 0.65rem; }
-  }
+}
 
-  /* ── Analytics ── */
-  .chart-tab {
-    padding: 7px 16px;
-    font-family: var(--font-mono);
-    font-size: 0.7rem;
-    letter-spacing: 0.06em;
-    border: 1px solid var(--border);
-    border-radius: 20px;
-    background: var(--surface);
-    color: var(--muted);
-    cursor: pointer;
-    transition: all 0.2s;
-    white-space: nowrap;
-  }
-  .chart-tab:hover { border-color: var(--accent); color: var(--accent); }
-  .chart-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 700; }
+/* ── Analytics ── */
+.chart-tab {
+padding: 7px 16px;
+font-family: var(–font-mono);
+font-size: 0.7rem;
+letter-spacing: 0.06em;
+border: 1px solid var(–border);
+border-radius: 20px;
+background: var(–surface);
+color: var(–muted);
+cursor: pointer;
+transition: all 0.2s;
+white-space: nowrap;
+}
+.chart-tab:hover { border-color: var(–accent); color: var(–accent); }
+.chart-tab.active { background: var(–accent); color: #fff; border-color: var(–accent); font-weight: 700; }
 
-  .analytics-panel { width: 100%; }
+.analytics-panel { width: 100%; }
 
-  /* ── Log ── */
-  .log-item {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    padding: 10px 16px;
-    border-bottom: 1px solid var(--border);
-  }
-  .log-item:last-child { border-bottom: none; }
-  .log-time { color: var(--muted); font-size: 0.65rem; white-space: nowrap; margin-top: 1px; flex-shrink: 0; }
-  .log-icon { font-size: 0.9rem; flex-shrink: 0; }
-  .log-msg { color: var(--text); font-size: 0.72rem; line-height: 1.5; }
-  .log-item.log-add .log-icon { color: var(--green); }
-  .log-item.log-del .log-icon { color: var(--red); }
+/* ── Log ── */
+.log-item {
+display: flex;
+align-items: flex-start;
+gap: 12px;
+padding: 10px 16px;
+border-bottom: 1px solid var(–border);
+}
+.log-item:last-child { border-bottom: none; }
+.log-time { color: var(–muted); font-size: 0.65rem; white-space: nowrap; margin-top: 1px; flex-shrink: 0; }
+.log-icon { font-size: 0.9rem; flex-shrink: 0; }
+.log-msg { color: var(–text); font-size: 0.72rem; line-height: 1.5; }
+.log-item.log-add .log-icon { color: var(–green); }
+.log-item.log-del .log-icon { color: var(–red); }
 
-  @media (max-width: 600px) {
-    #chart-pie > div, #chart-bondstock > div { grid-template-columns: 1fr; }
-    #pieLegend, #bondstockLegend { flex-direction: row; flex-wrap: wrap; gap: 6px; }
-  }
+@media (max-width: 600px) {
+#chart-pie > div, #chart-bondstock > div { grid-template-columns: 1fr; }
+#pieLegend, #bondstockLegend { flex-direction: row; flex-wrap: wrap; gap: 6px; }
+}
 
-  /* ── Auth ── */
-  #loginScreen {
-    position: fixed; inset: 0; z-index: 9999;
-    background: var(--bg);
-    display: flex; align-items: center; justify-content: center;
-  }
-  #loginScreen::before {
-    content: '';
-    position: fixed; inset: 0;
-    background-image: radial-gradient(circle, #cbd5e1 1px, transparent 1px);
-    background-size: 28px 28px;
-    opacity: 0.5; pointer-events: none;
-  }
-  .login-card {
-    position: relative; z-index: 1;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 20px;
-    padding: 48px 40px;
-    text-align: center;
-    box-shadow: 0 8px 40px rgba(37,99,235,0.12);
-    max-width: 360px; width: 90%;
-  }
-  .login-logo {
-    font-family: var(--font-mono);
-    font-size: 1.3rem;
-    font-weight: 700;
-    letter-spacing: 0.2em;
-    color: var(--accent);
-    margin-bottom: 6px;
-  }
-  .login-logo span { color: var(--muted); }
-  .login-sub {
-    font-family: var(--font-mono);
-    font-size: 0.7rem;
-    color: var(--muted);
-    letter-spacing: 0.1em;
-    margin-bottom: 36px;
-  }
-  .btn-google {
-    display: flex; align-items: center; justify-content: center; gap: 12px;
-    width: 100%; padding: 13px 20px;
-    background: var(--surface);
-    border: 1.5px solid var(--border);
-    border-radius: 10px;
-    font-family: var(--font-body);
-    font-size: 0.92rem;
-    font-weight: 500;
-    color: var(--text);
-    cursor: pointer;
-    transition: all 0.2s;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
-  }
-  .btn-google:hover { border-color: var(--accent); box-shadow: 0 2px 12px rgba(37,99,235,0.12); }
-  .btn-google svg { width: 20px; height: 20px; flex-shrink: 0; }
-  .login-err {
-    margin-top: 14px;
-    font-size: 0.72rem;
-    color: var(--red);
-    font-family: var(--font-mono);
-    min-height: 18px;
-  }
-  .btn-logout {
-    background: none; border: 1px solid var(--border);
-    color: var(--muted); font-family: var(--font-mono);
-    font-size: 0.65rem; padding: 4px 10px;
-    border-radius: 6px; cursor: pointer;
-    transition: all 0.2s; letter-spacing: 0.05em;
-  }
-  .btn-logout:hover { border-color: var(--red); color: var(--red); }
-  #appWrapper { display: none; }
+/* ── Auth ── */
+#loginScreen {
+position: fixed; inset: 0; z-index: 9999;
+background: var(–bg);
+display: flex; align-items: center; justify-content: center;
+}
+#loginScreen::before {
+content: ‘’;
+position: fixed; inset: 0;
+background-image: radial-gradient(circle, #cbd5e1 1px, transparent 1px);
+background-size: 28px 28px;
+opacity: 0.5; pointer-events: none;
+}
+.login-card {
+position: relative; z-index: 1;
+background: var(–surface);
+border: 1px solid var(–border);
+border-radius: 20px;
+padding: 48px 40px;
+text-align: center;
+box-shadow: 0 8px 40px rgba(37,99,235,0.12);
+max-width: 360px; width: 90%;
+}
+.login-logo {
+font-family: var(–font-mono);
+font-size: 1.3rem;
+font-weight: 700;
+letter-spacing: 0.2em;
+color: var(–accent);
+margin-bottom: 6px;
+}
+.login-logo span { color: var(–muted); }
+.login-sub {
+font-family: var(–font-mono);
+font-size: 0.7rem;
+color: var(–muted);
+letter-spacing: 0.1em;
+margin-bottom: 36px;
+}
+.btn-google {
+display: flex; align-items: center; justify-content: center; gap: 12px;
+width: 100%; padding: 13px 20px;
+background: var(–surface);
+border: 1.5px solid var(–border);
+border-radius: 10px;
+font-family: var(–font-body);
+font-size: 0.92rem;
+font-weight: 500;
+color: var(–text);
+cursor: pointer;
+transition: all 0.2s;
+box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+.btn-google:hover { border-color: var(–accent); box-shadow: 0 2px 12px rgba(37,99,235,0.12); }
+.btn-google svg { width: 20px; height: 20px; flex-shrink: 0; }
+.login-err {
+margin-top: 14px;
+font-size: 0.72rem;
+color: var(–red);
+font-family: var(–font-mono);
+min-height: 18px;
+}
+.btn-logout {
+background: none; border: 1px solid var(–border);
+color: var(–muted); font-family: var(–font-mono);
+font-size: 0.65rem; padding: 4px 10px;
+border-radius: 6px; cursor: pointer;
+transition: all 0.2s; letter-spacing: 0.05em;
+}
+.btn-logout:hover { border-color: var(–red); color: var(–red); }
+#appWrapper { display: none; }
 </style>
+
   <!-- Firebase SDK -->
+
   <script type="module">
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
     import { getDatabase, ref, set, get, remove, update } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
@@ -709,10 +714,12 @@
     window._fbReady = true;
     window.dispatchEvent(new Event('firebase-ready'));
   </script>
+
 </head>
 <body>
 
 <!-- ── Login Screen ── -->
+
 <div id="loginScreen">
   <div class="login-card">
     <div class="login-logo">ASSET<span>/</span>TRACKER</div>
@@ -730,37 +737,20 @@
   </div>
 </div>
 
-<!-- ── API Key Modal ── -->
-<div id="apiKeyModal" style="display:none;position:fixed;inset:0;z-index:8888;background:rgba(0,0,0,0.45);display:none;align-items:center;justify-content:center;">
-  <div style="background:var(--surface);border-radius:16px;padding:32px 28px;max-width:420px;width:90%;box-shadow:0 8px 40px rgba(0,0,0,0.18);">
-    <div style="font-family:var(--font-mono);font-size:1rem;font-weight:700;letter-spacing:0.1em;margin-bottom:6px;color:var(--text);">⚙ API 金鑰設定</div>
-    <div style="font-size:0.78rem;color:var(--muted);margin-bottom:20px;line-height:1.6;">
-      截圖 OCR 功能需要 Anthropic API Key。<br>
-      取得方式：<a href="https://console.anthropic.com/keys" target="_blank" style="color:var(--accent);">console.anthropic.com/keys</a>
-    </div>
-    <input id="apiKeyInput" type="password" placeholder="sk-ant-api03-..." autocomplete="off"
-      style="width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:10px;font-family:var(--font-mono);font-size:0.82rem;color:var(--text);background:var(--surface2);box-sizing:border-box;outline:none;margin-bottom:8px;">
-    <div id="apiKeyStatus" style="font-size:0.75rem;color:var(--muted);min-height:18px;margin-bottom:16px;"></div>
-    <div style="display:flex;gap:10px;">
-      <button onclick="saveApiKey()" style="flex:1;padding:11px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-family:var(--font-mono);font-size:0.85rem;font-weight:600;cursor:pointer;">儲存</button>
-      <button onclick="closeApiKeyModal()" style="flex:1;padding:11px;background:var(--surface2);color:var(--muted);border:1px solid var(--border);border-radius:10px;font-family:var(--font-mono);font-size:0.85rem;cursor:pointer;">取消</button>
-    </div>
-  </div>
-</div>
-
 <!-- ── Main App ── -->
+
 <div id="appWrapper">
 <div class="wrapper">
   <header>
     <div class="logo">ASSET<span>/</span>TRACKER</div>
     <div style="display:flex;align-items:center;gap:14px;">
       <div class="header-date" id="headerDate"></div>
-      <button class="btn-logout" onclick="openApiKeyModal()" style="border-color:var(--accent);color:var(--accent);" title="設定 API Key">⚙ API</button>
       <button class="btn-logout" onclick="doSignOut()">登出</button>
     </div>
   </header>
 
   <!-- Summary cards -->
+
   <div class="summary-grid">
     <div class="card">
       <div class="card-label">目前總資產</div>
@@ -785,6 +775,7 @@
   </div>
 
   <!-- Main grid -->
+
   <div class="main-grid">
     <!-- Chart panel -->
     <div class="panel">
@@ -822,71 +813,55 @@
       </div>
     </div>
 
-    <!-- Right panel: text paste -->
-    <div style="display:flex; flex-direction:column; gap:20px;">
-      <!-- Text paste OCR -->
-      <div class="panel">
-        <div class="panel-header">
-          <div class="panel-title">📋 貼上文字自動讀取</div>
-        </div>
-        <div class="panel-body">
+```
+<!-- Right panel: manual entry forms -->
+<div style="display:flex; flex-direction:column; gap:20px;">
 
-          <div style="font-family:var(--font-mono);font-size:0.68rem;color:var(--muted);margin-bottom:8px;line-height:1.6;">
-            從券商 App 複製資產資訊後貼入，AI 自動解析總資產、個股明細。
-          </div>
-
-          <textarea id="pasteInput"
-            placeholder="在此貼上從券商 App 複製的文字...&#10;&#10;包含總資產、報酬率、個股明細等資訊即可，格式不限。"
-            style="width:100%;min-height:180px;padding:12px;border:1.5px solid var(--border);border-radius:10px;font-family:var(--font-mono);font-size:0.78rem;color:var(--text);background:var(--surface2);box-sizing:border-box;resize:vertical;outline:none;line-height:1.6;transition:border-color 0.2s;"
-            oninput="updatePasteBtn()"
-            onfocus="this.style.borderColor='var(--accent)'"
-            onblur="this.style.borderColor='var(--border)'"></textarea>
-
-          <div style="display:flex;gap:8px;margin-top:10px;">
-            <button class="btn" id="analyseBtn" onclick="runTextOCR()" disabled style="opacity:0.45;flex:1;">
-              🔍 AI 解析
-            </button>
-            <button onclick="document.getElementById('pasteInput').value='';updatePasteBtn();"
-              style="padding:10px 16px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;font-family:var(--font-mono);font-size:0.78rem;color:var(--muted);cursor:pointer;transition:all 0.2s;"
-              onmouseover="this.style.borderColor='var(--red)';this.style.color='var(--red)'"
-              onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">
-              清除
-            </button>
-          </div>
-
-          <!-- Loading -->
-          <div id="ocrLoading" style="display:none;text-align:center;padding:20px;font-family:var(--font-mono);font-size:0.78rem;color:var(--accent);">
-            <div class="spin" style="margin-bottom:10px;">⟳</div>
-            AI 讀取中...
-          </div>
-
-          <!-- OCR result -->
-          <div id="ocrResult" style="display:none; margin-top:14px;">
-            <div style="font-family:var(--font-mono);font-size:0.68rem;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:10px;">AI 讀取結果</div>
-            <div style="display:flex;flex-direction:column;gap:8px;">
-              <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;">
-                <div style="font-size:0.68rem;color:var(--muted);font-family:var(--font-mono);margin-bottom:4px;">總資產</div>
-                <div id="ocrAmount" style="font-family:var(--font-mono);font-size:1.1rem;color:var(--accent);font-weight:700;">—</div>
-              </div>
-              <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;">
-                <div style="font-size:0.68rem;color:var(--muted);font-family:var(--font-mono);margin-bottom:4px;">日期</div>
-                <div id="ocrDate" style="font-family:var(--font-mono);font-size:0.9rem;color:var(--text);">—</div>
-              </div>
-              <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;">
-                <div style="font-size:0.68rem;color:var(--muted);font-family:var(--font-mono);margin-bottom:4px;">報酬率｜個股數</div>
-                <div id="ocrReturn" style="font-family:var(--font-mono);font-size:0.9rem;color:var(--green);">—</div>
-              </div>
-            </div>
-            <button class="btn" style="margin-top:12px;" onclick="confirmOcr()">✓ 確認加入記錄</button>
-            <div id="ocrNote" style="font-size:0.7rem;color:var(--muted);margin-top:8px;font-family:var(--font-mono);line-height:1.5;"></div>
-          </div>
-
-        </div>
+  <!-- 手動新增資產記錄 -->
+  <div class="panel">
+    <div class="panel-header">
+      <div class="panel-title">✏️ 新增資產記錄</div>
+    </div>
+    <div class="panel-body">
+      <div class="form-group">
+        <label class="form-label">日期</label>
+        <input type="date" class="form-input" id="manualDate" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">總市值 (NT$)</label>
+        <input type="number" class="form-input" id="manualAmount" placeholder="例：13542133" min="0" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">總付出成本 (NT$)</label>
+        <input type="number" class="form-input" id="manualCost" placeholder="例：11600000" min="0" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">預估損益 (NT$)</label>
+        <input type="number" class="form-input" id="manualPnl" placeholder="例：1942133（可為負數）" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">預估報酬率 (%)</label>
+        <input type="number" class="form-input" id="manualReturnRate" placeholder="例：16.57" step="0.01" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">備註（選填）</label>
+        <input type="text" class="form-input" id="manualNote" placeholder="例：加權33599" />
+      </div>
+      <button class="btn" onclick="addManualEntry()">+ 新增記錄</button>
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <button class="btn-sm" onclick="loadSample()">↺ 還原範例資料</button>
+        <button class="btn-sm" style="color:var(--red);border-color:rgba(220,38,38,0.3);" onclick="clearAll()">✕ 清除全部</button>
       </div>
     </div>
   </div>
 
+</div>
+```
+
+  </div>
+
   <!-- History -->
+
   <div class="panel">
     <div class="panel-header">
       <div class="panel-title">歷史記錄</div>
@@ -902,81 +877,122 @@
   </div>
 
   <!-- Holdings -->
+
   <div class="panel" style="margin-top:20px;">
     <div class="panel-header">
       <div class="panel-title">📊 個股庫存明細</div>
       <div style="display:flex;gap:8px;align-items:center;">
         <div style="font-family:var(--font-mono);font-size:0.68rem;color:var(--muted);" id="holdingsDate"></div>
+        <button class="btn-sm" style="margin-top:0;" onclick="toggleHoldingsForm()">+ 新增個股</button>
+        <button class="btn-sm" style="margin-top:0;color:var(--red);border-color:rgba(220,38,38,0.3);" onclick="clearHoldings()">✕ 清除明細</button>
+      </div>
+    </div>
 
-      </div>
+```
+<!-- Add stock form (hidden by default) -->
+<div id="holdingsForm" style="display:none;padding:20px;border-bottom:1px solid var(--border);background:var(--surface2);">
+  <div style="font-family:var(--font-mono);font-size:0.68rem;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:14px;">新增 / 編輯個股</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px;">
+    <div class="form-group" style="margin-bottom:0;">
+      <label class="form-label">股票代號</label>
+      <input type="text" class="form-input" id="hCode" placeholder="例：00935" />
     </div>
-    <div class="panel-body" id="holdingsBody">
-      <!-- loading / table injected here -->
-      <div id="holdingsLoading" style="display:none;text-align:center;padding:24px;font-family:var(--font-mono);font-size:0.78rem;color:var(--accent);">
-        <div class="spin" style="margin-bottom:8px;">⟳</div>AI 讀取個股中...
-      </div>
-      <div id="holdingsTable"></div>
+    <div class="form-group" style="margin-bottom:0;">
+      <label class="form-label">股票名稱</label>
+      <input type="text" class="form-input" id="hName" placeholder="例：野村臺灣新科技50" />
     </div>
+    <div class="form-group" style="margin-bottom:0;">
+      <label class="form-label">持股數量（股）</label>
+      <input type="number" class="form-input" id="hShares" placeholder="例：88000" min="0" />
     </div>
+    <div class="form-group" style="margin-bottom:0;">
+      <label class="form-label">現值 (NT$)</label>
+      <input type="number" class="form-input" id="hValue" placeholder="例：3326287" />
+    </div>
+    <div class="form-group" style="margin-bottom:0;">
+      <label class="form-label">損益 (NT$)</label>
+      <input type="number" class="form-input" id="hPnl" placeholder="例：350270（可負數）" />
+    </div>
+    <div class="form-group" style="margin-bottom:0;">
+      <label class="form-label">報酬率 (%)</label>
+      <input type="number" class="form-input" id="hPct" placeholder="例：11.77（可負數）" step="0.01" />
+    </div>
+  </div>
+  <div style="display:flex;gap:10px;">
+    <button class="btn" style="flex:1;" onclick="saveHoldingRow()">✓ 儲存個股</button>
+    <button onclick="cancelHoldingsForm()" style="padding:11px 18px;background:var(--surface);border:1px solid var(--border);border-radius:8px;font-family:var(--font-mono);font-size:0.78rem;color:var(--muted);cursor:pointer;">取消</button>
+  </div>
+</div>
+
+<div class="panel-body" id="holdingsBody">
+  <div id="holdingsTable"></div>
+</div>
+```
+
   </div>
 
   <!-- ── Analytics Section ── -->
+
   <div style="margin-top:28px;">
     <div style="font-family:var(--font-mono);font-size:0.7rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:16px;display:flex;align-items:center;gap:10px;">
       📈 數據分析
       <div style="flex:1;height:1px;background:var(--border);"></div>
     </div>
 
-    <!-- Chart Tabs -->
-    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:18px;" id="chartTabs">
-      <button class="chart-tab active" onclick="switchChart('monthly')">月報酬率</button>
-      <button class="chart-tab" onclick="switchChart('pie')">個股佔比</button>
-      <button class="chart-tab" onclick="switchChart('bondstock')">股債占比</button>
-      <button class="chart-tab" onclick="switchChart('vsindex')">vs 加權指數</button>
-      <button class="chart-tab" onclick="switchChart('annual')">年化報酬率</button>
+```
+<!-- Chart Tabs -->
+<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:18px;" id="chartTabs">
+  <button class="chart-tab active" onclick="switchChart('monthly')">月報酬率</button>
+  <button class="chart-tab" onclick="switchChart('pie')">個股佔比</button>
+  <button class="chart-tab" onclick="switchChart('bondstock')">股債占比</button>
+  <button class="chart-tab" onclick="switchChart('vsindex')">vs 加權指數</button>
+  <button class="chart-tab" onclick="switchChart('annual')">年化報酬率</button>
+</div>
+
+<!-- Chart Panels -->
+<div class="panel">
+  <div class="panel-body" style="min-height:320px;">
+
+    <!-- Monthly Returns Bar -->
+    <div id="chart-monthly" class="analytics-panel">
+      <div class="chart-wrap" style="height:280px;"><canvas id="monthlyChart"></canvas></div>
     </div>
 
-    <!-- Chart Panels -->
-    <div class="panel">
-      <div class="panel-body" style="min-height:320px;">
-
-        <!-- Monthly Returns Bar -->
-        <div id="chart-monthly" class="analytics-panel">
-          <div class="chart-wrap" style="height:280px;"><canvas id="monthlyChart"></canvas></div>
-        </div>
-
-        <!-- Pie Chart -->
-        <div id="chart-pie" class="analytics-panel" style="display:none;">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:center;">
-            <div style="position:relative;height:260px;"><canvas id="pieChart"></canvas></div>
-            <div id="pieLegend" style="font-family:var(--font-mono);font-size:0.72rem;display:flex;flex-direction:column;gap:8px;"></div>
-          </div>
-        </div>
-
-        <!-- Bond vs Stock -->
-        <div id="chart-bondstock" class="analytics-panel" style="display:none;">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:center;">
-            <div style="position:relative;height:260px;"><canvas id="bondstockChart"></canvas></div>
-            <div id="bondstockLegend" style="font-family:var(--font-mono);font-size:0.72rem;display:flex;flex-direction:column;gap:10px;"></div>
-          </div>
-        </div>
-
-        <!-- vs Index -->
-        <div id="chart-vsindex" class="analytics-panel" style="display:none;">
-          <div class="chart-wrap" style="height:280px;"><canvas id="vsindexChart"></canvas></div>
-          <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--muted);margin-top:8px;text-align:center;">* 加權指數來自截圖備註中的加權數值</div>
-        </div>
-
-        <!-- Annual Return -->
-        <div id="chart-annual" class="analytics-panel" style="display:none;">
-          <div class="chart-wrap" style="height:280px;"><canvas id="annualChart"></canvas></div>
-        </div>
-
+    <!-- Pie Chart -->
+    <div id="chart-pie" class="analytics-panel" style="display:none;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:center;">
+        <div style="position:relative;height:260px;"><canvas id="pieChart"></canvas></div>
+        <div id="pieLegend" style="font-family:var(--font-mono);font-size:0.72rem;display:flex;flex-direction:column;gap:8px;"></div>
       </div>
     </div>
+
+    <!-- Bond vs Stock -->
+    <div id="chart-bondstock" class="analytics-panel" style="display:none;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:center;">
+        <div style="position:relative;height:260px;"><canvas id="bondstockChart"></canvas></div>
+        <div id="bondstockLegend" style="font-family:var(--font-mono);font-size:0.72rem;display:flex;flex-direction:column;gap:10px;"></div>
+      </div>
+    </div>
+
+    <!-- vs Index -->
+    <div id="chart-vsindex" class="analytics-panel" style="display:none;">
+      <div class="chart-wrap" style="height:280px;"><canvas id="vsindexChart"></canvas></div>
+      <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--muted);margin-top:8px;text-align:center;">* 加權指數來自備註中的加權數值</div>
+    </div>
+
+    <!-- Annual Return -->
+    <div id="chart-annual" class="analytics-panel" style="display:none;">
+      <div class="chart-wrap" style="height:280px;"><canvas id="annualChart"></canvas></div>
+    </div>
+
+  </div>
+</div>
+```
+
   </div>
 
   <!-- ── Log Panel ── -->
+
   <div style="margin-top:28px;margin-bottom:40px;">
     <div style="font-family:var(--font-mono);font-size:0.7rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:16px;display:flex;align-items:center;gap:10px;">
       📋 操作日誌
@@ -1036,7 +1052,6 @@
 
   // ─── Firebase Storage helpers ───
   async function dbSaveEntries() {
-    // 以日期為 key 存成物件，避免 Firebase 陣列 index 問題
     try {
       const obj = {};
       entries.forEach(e => { obj[e.date.replace(/-/g, '_')] = e; });
@@ -1046,15 +1061,12 @@
   async function dbDeleteEntry(date) {
     const key = date.replace(/-/g, '_');
     try {
-      // Step 1: 直接刪除該 key
       await window._fbRemove('entries/' + key);
-      // Step 2: 再整體覆寫一次確保一致（雙保險）
       const obj = {};
       entries.forEach(e => { obj[e.date.replace(/-/g, '_')] = e; });
       await window._fbSet('entries', obj);
     } catch(e) {
       console.warn('FB delete entry:', e);
-      // fallback: 整體覆寫
       await dbSaveEntries();
     }
   }
@@ -1066,25 +1078,22 @@
     try {
       const e = await window._fbGet('entries');
       if (e === null) {
-        // 從未寫入過 → 用預設資料初始化
         entries = REAL_DATA;
-        await dbSaveEntries(); // 寫入一次，之後就不再 fallback
+        await dbSaveEntries();
       } else {
-        // 有資料（包含空物件 {} 或含 __cleared 標記 = 使用者清空過）
         const vals = Object.values(e).filter(v => typeof v === 'object' && v.date);
         entries = vals.sort((a,b) => a.date.localeCompare(b.date));
       }
     } catch { entries = []; }
     try {
       const h = await window._fbGet('holdings');
-      holdings = h || INIT_HOLDINGS;
-    } catch { holdings = INIT_HOLDINGS; }
+      holdings = h || { date: null, stocks: [] };
+    } catch { holdings = { date: null, stocks: [] }; }
     await dbLoadLogs();
   }
   function save() { dbSaveEntries(); }
 
   // ─── Auth ───
-  // ⚠ 只允許這個 email 登入，請換成你的 Google 帳號
   const ALLOWED_EMAIL = 'ben.sc.chou@gmail.com';
 
   function doSignIn() {
@@ -1107,30 +1116,34 @@
   // ─── Init ───
   document.getElementById('headerDate').textContent = new Date().toLocaleDateString('zh-TW', {year:'numeric',month:'long',day:'numeric',weekday:'short'});
 
-  // Boot: wait for Firebase then set up auth listener
+  // Set default date for manual entry
+  document.addEventListener('DOMContentLoaded', () => {
+    const dateInput = document.getElementById('manualDate');
+    if (dateInput) dateInput.value = new Date().toISOString().slice(0,10);
+  });
+
   async function boot() {
     window._fbOnAuth(async (user) => {
       if (user && user.email === ALLOWED_EMAIL) {
-        // Authorized — show app
         document.getElementById('loginScreen').style.display = 'none';
         document.getElementById('appWrapper').style.display = 'block';
         showToast('⏳ 載入資料中...');
         await dbLoadAll();
-        await loadApiKey();
         render();
         renderHoldings();
         renderLog();
         renderAnalytics();
         addLog('login', `登入：${user.email}`);
         showToast(`✓ 歡迎回來 ${user.displayName || ''}`);
+        // Set today's date in manual entry
+        const dateInput = document.getElementById('manualDate');
+        if (dateInput) dateInput.value = new Date().toISOString().slice(0,10);
       } else if (user) {
-        // Wrong account
         document.getElementById('loginErr').textContent = `❌ 此帳號 (${user.email}) 沒有存取權限`;
         document.getElementById('loginScreen').style.display = 'flex';
         document.getElementById('appWrapper').style.display = 'none';
         window._fbSignOut();
       } else {
-        // Not logged in
         document.getElementById('loginScreen').style.display = 'flex';
         document.getElementById('appWrapper').style.display = 'none';
       }
@@ -1140,251 +1153,37 @@
   if (window._fbReady) { boot(); }
   else { window.addEventListener('firebase-ready', boot); }
 
-  // ─── API Key Management ───
-  let _apiKey = '';
+  // ─── Manual Entry (資產記錄) ───
+  async function addManualEntry() {
+    const date        = document.getElementById('manualDate').value;
+    const amount      = parseFloat(document.getElementById('manualAmount').value);
+    const cost        = parseFloat(document.getElementById('manualCost').value) || null;
+    const pnl         = parseFloat(document.getElementById('manualPnl').value);
+    const returnRate  = parseFloat(document.getElementById('manualReturnRate').value);
+    const note        = document.getElementById('manualNote').value.trim();
 
-  async function loadApiKey() {
-    try {
-      const k = await window._fbGet('settings/apiKey');
-      _apiKey = k || '';
-      if (_apiKey) document.getElementById('apiKeyInput').value = _apiKey;
-    } catch {}
-  }
+    if (!date)              { showToast('⚠ 請選擇日期'); return; }
+    if (!amount || amount <= 0) { showToast('⚠ 請輸入有效的總市值'); return; }
 
-  function openApiKeyModal() {
-    const modal = document.getElementById('apiKeyModal');
-    modal.style.display = 'flex';
-    if (_apiKey) document.getElementById('apiKeyInput').value = _apiKey;
-    document.getElementById('apiKeyStatus').textContent = _apiKey ? '✓ 已設定 API Key' : '尚未設定';
-  }
-
-  function closeApiKeyModal() {
-    document.getElementById('apiKeyModal').style.display = 'none';
-  }
-
-  async function saveApiKey() {
-    const val = document.getElementById('apiKeyInput').value.trim();
-    if (!val.startsWith('sk-ant-')) {
-      document.getElementById('apiKeyStatus').textContent = '⚠ 格式不對，應以 sk-ant- 開頭';
-      document.getElementById('apiKeyStatus').style.color = 'var(--red)';
-      return;
-    }
-    _apiKey = val;
-    try {
-      await window._fbSet('settings/apiKey', val);
-      document.getElementById('apiKeyStatus').textContent = '✓ 已儲存';
-      document.getElementById('apiKeyStatus').style.color = 'var(--green)';
-      setTimeout(closeApiKeyModal, 800);
-      showToast('✓ API Key 已儲存');
-    } catch(e) {
-      document.getElementById('apiKeyStatus').textContent = '儲存失敗：' + e.message;
-    }
-  }
-
-  // 點 modal 背景關閉
-  document.getElementById('apiKeyModal').addEventListener('click', function(e) {
-    if (e.target === this) closeApiKeyModal();
-  });
-  let ocrPending = null;
-
-  // ─── Text Paste OCR ───
-  function updatePasteBtn() {
-    const val = document.getElementById('pasteInput').value.trim();
-    const btn = document.getElementById('analyseBtn');
-    btn.disabled = !val;
-    btn.style.opacity = val ? '1' : '0.45';
-  }
-
-  async function runTextOCR() {
-    const pasteText = document.getElementById('pasteInput').value.trim();
-    if (!pasteText) return;
-
-    document.getElementById('ocrResult').style.display = 'none';
-    document.getElementById('ocrLoading').style.display = 'block';
-    document.getElementById('analyseBtn').disabled = true;
-
-    // 短暫延遲讓 loading 動畫顯示
-    await new Promise(r => setTimeout(r, 300));
-
-    try {
-      const parsed = parsePortfolioText(pasteText);
-      ocrPending = parsed;
-
-      document.getElementById('ocrLoading').style.display = 'none';
-      document.getElementById('ocrResult').style.display = 'block';
-      document.getElementById('ocrAmount').textContent = parsed.total_asset
-        ? 'NT$ ' + Number(parsed.total_asset).toLocaleString('zh-TW') : '⚠ 未讀取到總資產';
-      document.getElementById('ocrDate').textContent = parsed.date || '⚠ 未偵測到日期';
-      document.getElementById('ocrReturn').textContent =
-        (parsed.return_rate || '—') + (parsed.stocks?.length ? `　${parsed.stocks.length} 檔個股` : '');
-      document.getElementById('ocrNote').textContent = parsed.notes || '';
-
-      if (parsed.stocks?.length) {
-        holdings = { date: parsed.date, stocks: parsed.stocks };
-        renderHoldings();
-      }
-
-    } catch (err) {
-      document.getElementById('ocrLoading').style.display = 'none';
-      document.getElementById('ocrResult').style.display = 'block';
-      document.getElementById('ocrAmount').textContent = '❌ 解析失敗';
-      document.getElementById('ocrDate').textContent = err.message;
-      document.getElementById('ocrReturn').textContent = '';
-      document.getElementById('ocrNote').textContent = '';
-      ocrPending = null;
-    }
-    document.getElementById('analyseBtn').disabled = false;
-  }
-
-  // ─── 本地文字解析（不需要 API Key，格式彈性）───
-  function parsePortfolioText(text) {
-    const clean = text.replace(/\r/g, '');
-    const noComma = clean.replace(/,/g, '');
-
-    // ── 日期 ──
-    let date = new Date().toISOString().slice(0,10);
-    for (const p of [
-      /(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/,
-      /(\d{4})年(\d{1,2})月(\d{1,2})日/,
-    ]) {
-      const m = clean.match(p);
-      if (!m) continue;
-      const [,y,mo,d] = m;
-      if (parseInt(y) >= 2020 && parseInt(y) <= 2035) {
-        date = `${y}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-        break;
-      }
-    }
-
-    // ── 總資產：先找關鍵字，沒有則取最大合理數字 ──
-    let total_asset = null;
-    const kwMatch = noComma.match(/(?:總市值|總資產|市值)[^\d]*(\d{5,9})/);
-    if (kwMatch) {
-      total_asset = parseInt(kwMatch[1]);
-    } else {
-      const allNums = [...noComma.matchAll(/\b(\d{6,9})\b/g)]
-        .map(m => parseInt(m[1])).filter(n => n >= 100000 && n <= 999999999);
-      if (allNums.length) total_asset = Math.max(...allNums);
-    }
-
-    // ── 報酬率：先找關鍵字，沒有則找合理範圍的 % ──
-    let return_rate = null;
-    const retKw = clean.match(/(?:預估報酬率?|總報酬率?|報酬率?)[^\d\-+%]*([+\-]?\d+\.?\d*)%/);
-    if (retKw) {
-      return_rate = retKw[1] + '%';
-    } else {
-      const pcts = [...clean.matchAll(/([+\-]?\d+\.?\d*)%/g)].map(m => parseFloat(m[1]));
-      const c = pcts.find(p => Math.abs(p) >= 0.01 && Math.abs(p) < 200);
-      if (c != null) return_rate = c + '%';
-    }
-
-    // ── 加權指數 ──
-    let index = null;
-    const idxM = noComma.match(/加權[^\d]*(\d{4,6})/);
-    if (idxM) index = parseInt(idxM[1]);
-
-    // ── 個股解析 ──
-    const stocks = [];
-
-    // 格式A：分行格式（代碼 + 空白 + 名稱 + 數字）
-    const lines = clean.split('\n').map(l => l.trim()).filter(Boolean);
-    for (const line of lines) {
-      const m = line.match(/^(\d{4,6}[A-Z]?)\s+(\S+).*?\s([\d,]{3,})\s+([\d,]{4,})\s+([+\-][\d,]+)\s+([+\-]?\d+\.?\d*)%?/);
-      if (m) {
-        stocks.push({
-          code: m[1], name: m[2],
-          shares: parseInt(m[3].replace(/,/g,'')),
-          value:  parseInt(m[4].replace(/,/g,'')),
-          pnl:   parseInt(m[5].replace(/,/g,'')),
-          pct:   parseFloat(m[6])
-        });
-      }
-    }
-
-    // 格式B：拼接格式（代碼緊接中文名稱，無空格分隔）
-    if (stocks.length === 0) {
-      const codeRe = /(\d{4,6}[A-Z]?)(?=[\u4e00-\u9fff])/g;
-      const positions = [];
-      let cm;
-      while ((cm = codeRe.exec(clean)) !== null) {
-        const code = cm[1];
-        // 排除日期年份
-        if (/^\d{4}$/.test(code) && parseInt(code) > 2000 && parseInt(code) < 2100) continue;
-        positions.push({ code, pos: cm.index });
-      }
-
-      for (let i = 0; i < positions.length; i++) {
-        const seg = clean.slice(positions[i].pos + positions[i].code.length, positions[i+1]?.pos ?? clean.length);
-
-        // 找第一個千分位逗號，取其實際逗號位置
-        const commaM = seg.match(/(\d{1,3}),(\d{3})/);
-        if (!commaM) {
-          // 無逗號（最後一筆可能缺損益）
-          const numM = seg.match(/^(.*\D)(\d{5,9})$/);
-          if (numM) stocks.push({ code: positions[i].code, name: numM[1].trim(), shares: null, value: parseInt(numM[2]), pnl: null, pct: null });
-          continue;
-        }
-
-        // 逗號實際位置 = 匹配起點 + cm[1].length
-        const matchStart = seg.indexOf(commaM[0]);
-        const commaIdx = matchStart + commaM[1].length;
-
-        // 找逗號前連續數字的起點
-        let numStart = commaIdx;
-        while (numStart > 0 && /\d/.test(seg[numStart-1])) numStart--;
-
-        const name = seg.slice(0, numStart).trim();
-        const fullPrefix = seg.slice(numStart, commaIdx);
-        const combined = fullPrefix + commaM[2]; // 含名稱尾數+股數
-
-        // 現值
-        const rest = seg.slice(commaIdx + 1 + 3);
-        const valM = rest.match(/^([\d,]+)/);
-        if (!valM) continue;
-        const value = parseInt(valM[1].replace(/,/g,''));
-
-        // 損益 + 報酬率
-        const afterVal = rest.slice(valM[0].length);
-        const pnlM = afterVal.match(/([+\-][\d,]+)([+\-]\d+\.?\d*)%/);
-        const pnl = pnlM ? parseInt(pnlM[1].replace(/,/g,'')) : null;
-        const pct = pnlM ? parseFloat(pnlM[2]) : null;
-
-        // 從 combined 找正確股數：每股價格合理(5~5000) 且是1000倍數
-        let shares = null;
-        for (let k = combined.length; k >= 1; k--) {
-          const candidate = parseInt(combined.slice(combined.length - k));
-          if (candidate < 1000 || candidate % 1000 !== 0) continue;
-          const price = value / candidate;
-          if (price >= 5 && price <= 5000) { shares = candidate; break; }
-        }
-
-        stocks.push({ code: positions[i].code, name, shares, value, pnl, pct });
-      }
-    }
-
-    return { total_asset, return_rate, date, index, notes: '', stocks };
-  }
-  function confirmOcr() {
-    if (!ocrPending) return;
-    const amount = ocrPending.total_asset;
-    const date = ocrPending.date;
-    const note = ocrPending.notes || '文字匯入';
-    if (!amount || !date) { showToast('⚠ 未偵測到日期或金額，無法加入'); return; }
+    const entry = { date, amount, note };
+    if (cost)       entry.cost       = cost;
+    if (!isNaN(pnl))        entry.pnl        = pnl;
+    if (!isNaN(returnRate)) entry.returnRate = returnRate;
 
     const exists = entries.find(e => e.date === date);
-    if (exists) { exists.amount = amount; exists.note = note; }
-    else { entries.push({ date, amount, note }); entries.sort((a,b) => a.date.localeCompare(b.date)); }
-    dbSaveEntries();
-
-    if (ocrPending.stocks?.length) {
-      holdings = { date, stocks: ocrPending.stocks };
-      dbSaveHoldings();
+    if (exists) {
+      if (!confirm(`日期 ${date} 已有記錄 (${fmt(exists.amount)})，是否覆蓋？`)) return;
+      Object.assign(exists, entry);
+    } else {
+      entries.push(entry);
+      entries.sort((a,b) => a.date.localeCompare(b.date));
     }
 
+    await dbSaveEntries();
     render();
-    renderHoldings();
     renderAnalytics();
-    addLog('add', `文字匯入：${date} ${fmt(amount)}${ocrPending.stocks?.length ? ` · ${ocrPending.stocks.length} 檔個股` : ''}`);
+    addLog('add', `手動新增：${date} ${fmt(amount)}${returnRate ? ` 報酬${returnRate}%` : ''}${note ? ' · ' + note : ''}`);
+    showToast(`✓ 已新增：${date} ${fmt(amount)}`);
 
     ['totalValue','peakValue','drawdownValue','underwaterBadge'].forEach(id => {
       const card = document.getElementById(id)?.closest('.card');
@@ -1395,11 +1194,10 @@
       card.addEventListener('animationend', () => card.classList.remove('flash'), { once: true });
     });
 
-    document.getElementById('ocrResult').style.display = 'none';
-    document.getElementById('pasteInput').value = '';
-    updatePasteBtn();
-    ocrPending = null;
-    showToast('✓ 已更新：資產走勢、個股明細、四張統計卡片');
+    // clear fields but keep date
+    ['manualAmount','manualCost','manualPnl','manualReturnRate','manualNote'].forEach(id => {
+      document.getElementById(id).value = '';
+    });
   }
 
   // ─── Entry CRUD ───
@@ -1408,10 +1206,8 @@
     const e = entries[idx];
     entries.splice(idx, 1);
 
-    // 刪除並驗證
     await dbDeleteEntry(e.date);
 
-    // 從 Firebase 重新讀取，確保本地狀態與資料庫一致
     try {
       const fresh = await window._fbGet('entries');
       if (fresh) {
@@ -1430,7 +1226,6 @@
   async function clearAll() {
     if (!confirm('確定要清除所有資料？此動作無法復原。')) return;
     entries = [];
-    // 寫入 __cleared 標記，讓 dbLoadAll 知道是使用者清空，不要 fallback 到 REAL_DATA
     await window._fbSet('entries', { __cleared: true });
     render();
     renderAnalytics();
@@ -1441,6 +1236,7 @@
     entries = REAL_DATA.slice();
     dbSaveEntries();
     render();
+    renderAnalytics();
     showToast('✓ 已還原截圖資料');
   }
 
@@ -1461,7 +1257,7 @@
       let key;
       if (view === 'M') key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
       else key = `${d.getFullYear()}`;
-      map[key] = e.amount; // last entry in period wins
+      map[key] = e.amount;
     });
     return Object.entries(map).sort((a,b) => a[0].localeCompare(b[0])).map(([k,v]) => ({label:k, value:v}));
   }
@@ -1482,7 +1278,6 @@
 
   function calcUnderwaterMonths(rawEntries, currentVal, peakVal) {
     if (currentVal >= peakVal) return 0;
-    // find when last peak was set
     let peak = -Infinity, peakDate = null;
     rawEntries.forEach(e => {
       if (e.amount > peak) { peak = e.amount; peakDate = e.date; }
@@ -1546,7 +1341,6 @@
     if (data.length >= 2)
       document.getElementById('historyRange').textContent = `${data[0].label} ─ ${data[data.length-1].label}`;
 
-    // max underwater: rough calc
     let maxUW = 0, uwStart = null;
     let pk = -Infinity;
     entries.forEach(e => {
@@ -1624,7 +1418,6 @@
             bodyColor: '#1e293b',
             titleFont: { family: 'Space Mono', size: 11 },
             bodyFont: { family: 'Space Mono', size: 12 },
-            boxShadow: '0 4px 16px rgba(0,0,0,0.1)',
             callbacks: {
               label: ctx => ctx.datasetIndex === 0
                 ? ' NT$ ' + ctx.raw.toLocaleString('zh-TW')
@@ -1667,15 +1460,6 @@
       return;
     }
     const sorted = [...entries].reverse();
-    let peak = -Infinity;
-    // calc peak going forward to know which entries are at highs
-    const peakByDate = {};
-    let pk = -Infinity;
-    entries.forEach(e => {
-      if (e.amount > pk) pk = e.amount;
-      peakByDate[e.date+e.amount] = pk;
-    });
-
     list.innerHTML = sorted.map((e, i) => {
       const realIdx = entries.length - 1 - i;
       const prev = entries[realIdx-1];
@@ -1683,10 +1467,15 @@
       const isUp = change > 0, isDown = change < 0;
       const cls = isUp ? 'up' : isDown ? 'down' : 'neutral';
       const sign = isUp ? '▲' : isDown ? '▼' : '─';
+      const extras = [];
+      if (e.cost)       extras.push(`成本 ${fmt(e.cost)}`);
+      if (e.pnl != null && !isNaN(e.pnl)) extras.push(`損益 ${e.pnl >= 0 ? '+' : ''}${Math.round(e.pnl).toLocaleString('zh-TW')}`);
+      if (e.returnRate != null && !isNaN(e.returnRate)) extras.push(`報酬 ${e.returnRate >= 0 ? '+' : ''}${e.returnRate}%`);
+      if (e.note) extras.push(e.note);
       return `<div class="history-item">
         <div class="history-left">
           <div class="history-date">${e.date}</div>
-          <div class="history-note">${e.note || '─'}</div>
+          <div class="history-note" style="color:var(--muted);font-size:0.72rem;">${extras.join(' · ') || '─'}</div>
         </div>
         <div class="history-right">
           <div style="font-family:var(--font-mono); font-size:0.7rem; color:var(--muted)">${sign} ${prev ? Math.abs(change*100).toFixed(1)+'%' : ''}</div>
@@ -1710,63 +1499,177 @@
     setTimeout(() => t.classList.remove('show'), 2500);
   }
 
+  // ─── Holdings Manual CRUD ───
+  let editingHoldingIdx = -1; // -1 = new, >=0 = editing
+
+  function toggleHoldingsForm() {
+    const f = document.getElementById('holdingsForm');
+    if (f.style.display === 'none') {
+      editingHoldingIdx = -1;
+      clearHoldingForm();
+      f.style.display = 'block';
+    } else {
+      f.style.display = 'none';
+    }
+  }
+
+  function cancelHoldingsForm() {
+    document.getElementById('holdingsForm').style.display = 'none';
+    editingHoldingIdx = -1;
+    clearHoldingForm();
+  }
+
+  function clearHoldingForm() {
+    ['hCode','hName','hShares','hValue','hPnl','hPct'].forEach(id => {
+      document.getElementById(id).value = '';
+    });
+  }
+
+  function editHolding(idx) {
+    const s = holdings.stocks[idx];
+    document.getElementById('hCode').value   = s.code || '';
+    document.getElementById('hName').value   = s.name || '';
+    document.getElementById('hShares').value = s.shares || '';
+    document.getElementById('hValue').value  = s.value || '';
+    document.getElementById('hPnl').value    = s.pnl != null ? s.pnl : '';
+    document.getElementById('hPct').value    = s.pct != null ? s.pct : '';
+    editingHoldingIdx = idx;
+    document.getElementById('holdingsForm').style.display = 'block';
+    document.getElementById('holdingsForm').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  function deleteHolding(idx) {
+    if (!confirm('確定要刪除這檔個股？')) return;
+    const name = holdings.stocks[idx].name;
+    holdings.stocks.splice(idx, 1);
+    dbSaveHoldings();
+    renderHoldings();
+    renderAnalytics();
+    addLog('del', `刪除個股：${name}`);
+    showToast(`✓ 已刪除 ${name}`);
+  }
+
+  function saveHoldingRow() {
+    const code   = document.getElementById('hCode').value.trim();
+    const name   = document.getElementById('hName').value.trim();
+    const shares = parseFloat(document.getElementById('hShares').value) || 0;
+    const value  = parseFloat(document.getElementById('hValue').value);
+    const pnl    = parseFloat(document.getElementById('hPnl').value);
+    const pct    = parseFloat(document.getElementById('hPct').value);
+
+    if (!code) { showToast('⚠ 請輸入股票代號'); return; }
+    if (!name) { showToast('⚠ 請輸入股票名稱'); return; }
+    if (isNaN(value)) { showToast('⚠ 請輸入現值'); return; }
+
+    const row = {
+      code, name, shares,
+      value,
+      pnl:  isNaN(pnl) ? 0 : pnl,
+      pct:  isNaN(pct) ? 0 : pct
+    };
+
+    if (!holdings.stocks) holdings.stocks = [];
+
+    if (editingHoldingIdx >= 0) {
+      holdings.stocks[editingHoldingIdx] = row;
+      addLog('add', `更新個股：${name}`);
+    } else {
+      holdings.stocks.push(row);
+      addLog('add', `新增個股：${name} 現值 ${Math.round(value).toLocaleString('zh-TW')}`);
+    }
+
+    holdings.date = new Date().toISOString().slice(0,10);
+    dbSaveHoldings();
+    renderHoldings();
+    renderAnalytics();
+    cancelHoldingsForm();
+    showToast(`✓ 個股已儲存：${name}`);
+  }
+
+  function clearHoldings() {
+    if (!confirm('確定要清除所有個股明細？')) return;
+    holdings = { date: null, stocks: [] };
+    dbSaveHoldings();
+    renderHoldings();
+    renderAnalytics();
+    showToast('個股明細已清除');
+  }
+
   function renderHoldings() {
-    const el = document.getElementById('holdingsTable');
+    const el     = document.getElementById('holdingsTable');
     const dateEl = document.getElementById('holdingsDate');
-    if (!holdings || !holdings.stocks?.length) {
-      el.innerHTML = '<div class="empty">尚無個股資料，請上傳截圖</div>';
+
+    if (!holdings?.stocks?.length) {
+      dateEl.textContent = '';
+      el.innerHTML = '<div class="empty">尚無個股資料，點擊「+ 新增個股」開始輸入</div>';
       return;
     }
-    dateEl.textContent = holdings.date || '';
-    const totalVal = holdings.stocks.reduce((s,r) => s+r.value, 0);
-    const rows = [...holdings.stocks].sort((a,b) => b.value - a.value);
+
+    dateEl.textContent = holdings.date ? `更新：${holdings.date}` : '';
+    const totalVal = holdings.stocks.reduce((s,r) => s + (r.value||0), 0);
+    const totalPnl = holdings.stocks.reduce((s,r) => s + (r.pnl||0), 0);
+    const rows = [...holdings.stocks].map((s,i) => ({...s, _i: i})).sort((a,b) => (b.value||0) - (a.value||0));
+
     el.innerHTML = `<div style="overflow-x:auto;">
       <table class="htable">
         <thead>
           <tr>
             <th>股票</th>
-            <th>股數</th>
-            <th>現值</th>
+            <th>持股數量</th>
+            <th>現值 (NT$)</th>
             <th class="col-hide">佔比</th>
-            <th>損益</th>
+            <th>損益 (NT$)</th>
             <th>報酬率</th>
+            <th>操作</th>
           </tr>
         </thead>
         <tbody>
           ${rows.map(s => {
-            const weight = (s.value/totalVal*100).toFixed(1);
-            const barW = Math.min(100, Math.abs(s.pct)/100*100);
-            const isPos = s.pnl >= 0;
+            const weight = totalVal ? (s.value/totalVal*100).toFixed(1) : '0.0';
+            const isPos  = (s.pnl||0) >= 0;
             return `<tr>
               <td>
                 <div class="stock-name">${s.name}</div>
                 <div class="stock-code">${s.code}</div>
               </td>
-              <td>${s.shares.toLocaleString()}</td>
-              <td>${Math.round(s.value).toLocaleString('zh-TW')}</td>
+              <td>${(s.shares||0).toLocaleString()}</td>
+              <td>${Math.round(s.value||0).toLocaleString('zh-TW')}</td>
               <td class="col-hide">
                 <div style="color:var(--muted);font-size:0.7rem;margin-bottom:3px;">${weight}%</div>
                 <div class="pct-bar-wrap"><div class="pct-bar" style="width:${weight}%"></div></div>
               </td>
               <td style="color:${isPos?'var(--green)':'var(--red)'}">
-                ${isPos?'+':''}${Math.abs(Math.round(s.pnl)).toLocaleString('zh-TW')}
+                ${isPos?'+':''}${Math.abs(Math.round(s.pnl||0)).toLocaleString('zh-TW')}
               </td>
               <td>
                 <span style="color:${isPos?'var(--green)':'var(--red)'};font-weight:700;">
-                  ${isPos?'+':''}${s.pct}%
+                  ${isPos?'+':''}${(s.pct||0).toFixed(2)}%
                 </span>
+              </td>
+              <td>
+                <div style="display:flex;gap:4px;">
+                  <button class="icon-btn edit" onclick="editHolding(${s._i})" title="編輯"
+                    style="background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:5px;width:26px;height:26px;cursor:pointer;font-size:0.72rem;transition:all 0.2s;"
+                    onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'"
+                    onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">✎</button>
+                  <button class="icon-btn del" onclick="deleteHolding(${s._i})" title="刪除"
+                    style="background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:5px;width:26px;height:26px;cursor:pointer;font-size:0.72rem;transition:all 0.2s;"
+                    onmouseover="this.style.borderColor='var(--red)';this.style.color='var(--red)'"
+                    onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">✕</button>
+                </div>
               </td>
             </tr>`;
           }).join('')}
         </tbody>
         <tfoot>
-          <tr style="border-top:1px solid var(--border);">
-            <td style="color:var(--muted);font-size:0.7rem;" colspan="2">合計</td>
+          <tr style="border-top:2px solid var(--border);">
+            <td style="color:var(--muted);font-size:0.7rem;" colspan="2">合計 ${rows.length} 檔</td>
             <td style="color:var(--text);font-weight:700;">${Math.round(totalVal).toLocaleString('zh-TW')}</td>
             <td class="col-hide"></td>
-            <td style="color:var(--green);font-weight:700;">
-              ${(()=>{const p=holdings.stocks.reduce((s,r)=>s+r.pnl,0);return (p>=0?'+':'')+Math.round(Math.abs(p)).toLocaleString('zh-TW')})()}
+            <td style="color:${totalPnl>=0?'var(--green)':'var(--red)'};font-weight:700;">
+              ${totalPnl>=0?'+':''}${Math.round(Math.abs(totalPnl)).toLocaleString('zh-TW')}
             </td>
+            <td></td>
             <td></td>
           </tr>
         </tfoot>
@@ -1774,87 +1677,11 @@
     </div>`;
   }
 
-  function handleHoldingsScreenshot(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-    e.target.value = '';
-    const reader = new FileReader();
-    reader.onload = ev => runHoldingsOCR(ev.target.result);
-    reader.readAsDataURL(file);
-  }
-
-  async function runHoldingsOCR(dataUrl) {
-    document.getElementById('holdingsLoading').style.display = 'block';
-    document.getElementById('holdingsTable').style.opacity = '0.3';
-    const base64 = dataUrl.split(',')[1];
-    const mediaType = dataUrl.split(';')[0].split(':')[1];
-    try {
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': _apiKey,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-allow-browser': 'true'
-        },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 1000,
-          messages: [{
-            role: 'user',
-            content: [
-              { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } },
-              { type: 'text', text: `這是台股 App 的個股庫存截圖。請讀取每一行股票資料，回傳純 JSON，不要其他文字：
-{
-  "date": "更新日期 YYYY-MM-DD，若有的話，否則 null",
-  "total_asset": 總資產數字（若有顯示）或 null,
-  "stocks": [
-    {
-      "code": "股票代碼",
-      "name": "股票名稱",
-      "shares": 庫存股數（純數字）,
-      "value": 現值（純數字，NT$）,
-      "pnl": 損益（純數字，可負數）,
-      "pct": 報酬率（純數字，可負數，例如 14.19）
-    }
-  ]
-}` }
-            ]
-          }]
-        })
-      });
-      const data = await res.json();
-      const text = data.content?.find(b=>b.type==='text')?.text || '';
-      const clean = text.replace(/```json|```/g,'').trim();
-      const parsed = JSON.parse(clean);
-      holdings = parsed;
-      dbSaveHoldings();
-      // also add to entries if total found
-      if (parsed.total_asset && parsed.date) {
-        const exists = entries.find(e => e.date === parsed.date);
-        if (!exists) {
-          entries.push({ date: parsed.date, amount: parsed.total_asset, note: '截圖匯入' });
-          entries.sort((a,b)=>a.date.localeCompare(b.date));
-          dbSaveEntries();
-          render();
-        }
-      }
-      showToast('✓ 個股資料已更新');
-    } catch(err) {
-      showToast('❌ 讀取失敗：' + err.message);
-    } finally {
-      document.getElementById('holdingsLoading').style.display = 'none';
-      document.getElementById('holdingsTable').style.opacity = '1';
-      renderHoldings();
-    }
-  }
-
   // ─── Log System ───
   let logs = [];
-  const LOG_KEY = 'asset_logs_zhou';
 
   async function dbSaveLogs() {
-    try { await window._fbSet('logs', logs.slice(-200)); } // keep last 200
+    try { await window._fbSet('logs', logs.slice(-200)); }
     catch(e) { console.warn('FB save logs:', e); }
   }
   async function dbLoadLogs() {
@@ -1865,12 +1692,7 @@
   }
 
   function addLog(type, msg) {
-    // type: 'add' | 'del' | 'login' | 'logout'
-    const entry = {
-      time: new Date().toISOString(),
-      type,
-      msg
-    };
+    const entry = { time: new Date().toISOString(), type, msg };
     logs.unshift(entry);
     dbSaveLogs();
     renderLog();
@@ -1914,7 +1736,6 @@
     event.target.classList.add('active');
     document.querySelectorAll('.analytics-panel').forEach(p => p.style.display = 'none');
     document.getElementById('chart-' + name).style.display = 'block';
-    // destroy old instance to prevent resize issues
     if (chartInstances[name]) { chartInstances[name].destroy(); delete chartInstances[name]; }
     renderAnalyticsChart(name);
   }
@@ -1929,7 +1750,6 @@
     }
   }
 
-  // 1. 月報酬率長條圖
   function renderMonthlyChart() {
     if (entries.length < 2) return;
     const sorted = [...entries].sort((a,b) => a.date.localeCompare(b.date));
@@ -1956,7 +1776,6 @@
     });
   }
 
-  // 2. 個股佔比圓餅圖
   function renderPieChart() {
     if (!holdings?.stocks?.length) return;
     const stocks = [...holdings.stocks].sort((a,b) => b.value - a.value);
@@ -1988,8 +1807,6 @@
     ).join('');
   }
 
-  // 3. 股債占比圓餅圖
-  // 判斷債券：代碼含 B 或名稱含 債/Bond
   function renderBondStockChart() {
     if (!holdings?.stocks?.length) return;
     let bondVal = 0, stockVal = 0;
@@ -2036,11 +1853,9 @@
       </div>`;
   }
 
-  // 4. 資產 vs 加權指數對比
   function renderVsIndexChart() {
     if (entries.length < 2) return;
     const sorted = [...entries].sort((a,b) => a.date.localeCompare(b.date));
-    // extract index from note: "加權NNNNN"
     const withIndex = sorted.filter(e => /加權(\d+)/.test(e.note || ''));
     if (withIndex.length < 2) {
       document.getElementById('chart-vsindex').innerHTML =
@@ -2077,12 +1892,10 @@
     });
   }
 
-  // 5. 年化報酬率趨勢（以當年度最早一筆為基準）
   function renderAnnualChart() {
     if (entries.length < 2) return;
     const sorted = [...entries].sort((a,b) => a.date.localeCompare(b.date));
 
-    // 找每年最早一筆
     const yearBase = {};
     sorted.forEach(e => {
       const yr = e.date.slice(0,4);
@@ -2093,7 +1906,7 @@
     sorted.forEach(e => {
       const yr = e.date.slice(0,4);
       const base = yearBase[yr];
-      if (e.date === base.date) return; // 跳過當年第一筆本身
+      if (e.date === base.date) return;
       const years = (new Date(e.date) - new Date(base.date)) / (365.25 * 86400000);
       if (years < 0.05) return;
       const cagr = (Math.pow(e.amount / base.amount, 1 / years) - 1) * 100;
@@ -2141,13 +1954,11 @@
     });
   }
 
-  // render default chart when data loads
   function renderAnalytics() {
     if (chartInstances[activeChart]) { chartInstances[activeChart].destroy(); delete chartInstances[activeChart]; }
     renderAnalyticsChart(activeChart);
   }
-
-  // Init handled by boot() above
 </script>
+
 </body>
 </html>
