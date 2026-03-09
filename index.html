@@ -791,18 +791,22 @@
           <div class="stat-box">
             <div class="stat-box-label">最大跌幅 (Max DD)</div>
             <div class="stat-box-value red" id="maxDD">—</div>
+            <div style="font-size:0.62rem;color:var(--muted);margin-top:4px;line-height:1.5;">從歷史最高點往下跌的最大幅度</div>
           </div>
           <div class="stat-box">
             <div class="stat-box-label">最長套牢時間</div>
             <div class="stat-box-value" id="maxUnderwater">—</div>
+            <div style="font-size:0.62rem;color:var(--muted);margin-top:4px;line-height:1.5;">從跌破前高到重新回到前高所花的最長時間</div>
           </div>
           <div class="stat-box">
             <div class="stat-box-label">總報酬率</div>
             <div class="stat-box-value" id="totalReturn">—</div>
+            <div style="font-size:0.62rem;color:var(--muted);margin-top:4px;line-height:1.5;">從第一筆記錄至今的總漲跌幅</div>
           </div>
           <div class="stat-box">
             <div class="stat-box-label">記錄筆數</div>
             <div class="stat-box-value" id="entryCount">0</div>
+            <div style="font-size:0.62rem;color:var(--muted);margin-top:4px;line-height:1.5;">資料庫中的總記錄數</div>
           </div>
         </div>
       </div>
@@ -1353,6 +1357,51 @@
     return { dds, maxDD, peakVal, peakLabel, peakIdx };
   }
 
+  // Returns max underwater duration in months, and array of {start,end} index pairs for chart shading
+  function calcUnderwaterPeriods(data) {
+    if (!data.length) return { maxUW: 0, periods: [] };
+    let peak = -Infinity, peakIdx = 0;
+    let inUW = false, uwStartIdx = 0;
+    let maxUW = 0;
+    const periods = []; // [{start, end}] index ranges
+
+    data.forEach((d, i) => {
+      if (d.value > peak) {
+        // new high reached
+        if (inUW) {
+          // close the underwater period
+          periods.push({ start: uwStartIdx, end: i });
+          const months = (parseDate(d.label) - parseDate(data[uwStartIdx].label)) / (1000*60*60*24*30.4);
+          if (months > maxUW) maxUW = months;
+          inUW = false;
+        }
+        peak = d.value;
+        peakIdx = i;
+      } else if (d.value < peak && !inUW) {
+        // started falling below peak
+        inUW = true;
+        uwStartIdx = peakIdx;
+      }
+    });
+
+    // if still underwater at end, count as ongoing
+    if (inUW) {
+      periods.push({ start: uwStartIdx, end: data.length - 1 });
+      const months = (new Date() - parseDate(data[uwStartIdx].label)) / (1000*60*60*24*30.4);
+      if (months > maxUW) maxUW = months;
+    }
+
+    return { maxUW, periods };
+  }
+
+  function parseDate(label) {
+    // label is either YYYY-MM or YYYY-MM-DD or YYYY
+    if (/^\d{4}-\d{2}-\d{2}$/.test(label)) return new Date(label);
+    if (/^\d{4}-\d{2}$/.test(label)) return new Date(label + '-01');
+    if (/^\d{4}$/.test(label)) return new Date(label + '-01-01');
+    return new Date(label);
+  }
+
   function calcUnderwaterMonths(rawEntries, currentVal, peakVal) {
     if (currentVal >= peakVal) return 0;
     let peak = -Infinity, peakDate = null;
@@ -1395,6 +1444,7 @@
     const currentDD = dds[dds.length-1];
     const totalRet = (last.value - first.value) / first.value;
     const uwMonths = calcUnderwaterMonths(entries, last.value, peakVal);
+    const { maxUW } = calcUnderwaterPeriods(data);
 
     document.getElementById('totalValue').textContent = fmt(last.value);
     document.getElementById('totalValue').className = 'card-value';
@@ -1418,16 +1468,7 @@
     if (data.length >= 2)
       document.getElementById('historyRange').textContent = `${data[0].label} ─ ${data[data.length-1].label}`;
 
-    let maxUW = 0, uwStart = null;
-    let pk = -Infinity;
-    entries.forEach(e => {
-      if (e.amount > pk) { pk = e.amount; uwStart = new Date(e.date); }
-      else {
-        const months = (new Date(e.date) - uwStart) / (1000*60*60*24*30.4);
-        if (months > maxUW) maxUW = months;
-      }
-    });
-    document.getElementById('maxUnderwater').textContent = maxUW > 0 ? Math.round(maxUW*10)/10 + ' 個月' : '—';
+    document.getElementById('maxUnderwater').textContent = maxUW > 0 ? (Math.round(maxUW*10)/10) + ' 個月' : '—';
   }
 
   function renderChart(data) {
@@ -1438,6 +1479,7 @@
     const labels = data.map(d => d.label);
     const values = data.map(d => d.value);
     const {dds} = calcDrawdown(data);
+    const {periods} = calcUnderwaterPeriods(data);
 
     const gradient = ctx.createLinearGradient(0,0,0,280);
     gradient.addColorStop(0,'rgba(37,99,235,0.2)');
@@ -1446,6 +1488,33 @@
     const ddGrad = ctx.createLinearGradient(0,0,0,280);
     ddGrad.addColorStop(0,'rgba(220,38,38,0.15)');
     ddGrad.addColorStop(1,'rgba(220,38,38,0)');
+
+    // Underwater shading plugin
+    const underwaterPlugin = {
+      id: 'underwaterShading',
+      beforeDraw(chart) {
+        if (!periods.length) return;
+        const { ctx, chartArea, scales } = chart;
+        if (!chartArea) return;
+        ctx.save();
+        periods.forEach(({ start, end }) => {
+          const x1 = scales.x.getPixelForValue(start);
+          const x2 = scales.x.getPixelForValue(end);
+          ctx.fillStyle = 'rgba(251,191,36,0.10)';
+          ctx.fillRect(x1, chartArea.top, x2 - x1, chartArea.height);
+          // top border line
+          ctx.strokeStyle = 'rgba(217,119,6,0.25)';
+          ctx.lineWidth = 1;
+          ctx.setLineDash([4, 3]);
+          ctx.beginPath();
+          ctx.moveTo(x1, chartArea.top);
+          ctx.lineTo(x1, chartArea.bottom);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        });
+        ctx.restore();
+      }
+    };
 
     chart = new Chart(ctx, {
       type: 'line',
@@ -1481,12 +1550,25 @@
           }
         ]
       },
+      plugins: [underwaterPlugin],
       options: {
         responsive: true,
         maintainAspectRatio: false,
         interaction: { mode:'index', intersect:false },
         plugins: {
-          legend: { display: true, labels: { color:'#64748b', font:{family:'Space Mono',size:10}, boxWidth:12, padding:16 } },
+          legend: {
+            display: true,
+            labels: {
+              color:'#64748b', font:{family:'Space Mono',size:10}, boxWidth:12, padding:16,
+              generateLabels(chart) {
+                const base = Chart.defaults.plugins.legend.labels.generateLabels(chart);
+                if (periods.length) {
+                  base.push({ text: '套牢期間', fillStyle: 'rgba(251,191,36,0.35)', strokeStyle: 'rgba(217,119,6,0.4)', lineWidth:1, hidden:false, datasetIndex:-1 });
+                }
+                return base;
+              }
+            }
+          },
           tooltip: {
             backgroundColor: '#ffffff',
             borderColor: '#dde3ec',
