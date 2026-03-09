@@ -1133,22 +1133,39 @@
   let ocrPending = null;
   let slotData = { 1: null, 2: null }; // base64 dataURLs
 
+  // 壓縮圖片至最大 1200px、品質 0.82，減少 API payload
+  function compressImage(dataUrl, maxPx = 1200, quality = 0.82) {
+    return new Promise(resolve => {
+      const img = new Image();
+      img.onload = () => {
+        const scale = Math.min(1, maxPx / Math.max(img.width, img.height));
+        const w = Math.round(img.width * scale);
+        const h = Math.round(img.height * scale);
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.src = dataUrl;
+    });
+  }
+
   function slotChanged(n, e) {
     const file = e.target.files[0];
     e.target.value = '';
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = ev => {
-      slotData[n] = ev.target.result;
+    reader.onload = async ev => {
+      // 壓縮後再存
+      const compressed = await compressImage(ev.target.result);
+      slotData[n] = compressed;
       const slot = document.getElementById('slot' + n);
       const preview = document.getElementById('preview' + n);
       const fnLabel = document.getElementById('filename' + n);
-      preview.src = ev.target.result;
+      preview.src = compressed;
       slot.classList.add('has-file');
-      // filename label
       fnLabel.textContent = '📄 ' + file.name;
       fnLabel.style.display = 'block';
-      // add checkmark badge if not already
       if (!slot.querySelector('.slot-check')) {
         const ck = document.createElement('div');
         ck.className = 'slot-check';
@@ -1227,7 +1244,14 @@
         })
       });
 
+      if (!res.ok) {
+        const errBody = await res.text();
+        throw new Error(`API 錯誤 ${res.status}: ${errBody.slice(0, 120)}`);
+      }
+
       const data = await res.json();
+      if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
+
       const text = data.content?.find(b => b.type === 'text')?.text || '';
       const clean = text.replace(/```json|```/g, '').trim();
       const parsed = JSON.parse(clean);
