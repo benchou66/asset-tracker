@@ -825,7 +825,7 @@ transition: all 0.2s; letter-spacing: 0.05em;
     <div class="panel-body">
       <div class="form-group">
         <label class="form-label">日期</label>
-        <input type="date" class="form-input" id="manualDate" />
+        <input type="text" class="form-input" id="manualDate" placeholder="例：2026/01/02" maxlength="10" />
       </div>
       <div class="form-group">
         <label class="form-label">總市值 (NT$)</label>
@@ -844,8 +844,12 @@ transition: all 0.2s; letter-spacing: 0.05em;
         <input type="number" class="form-input" id="manualReturnRate" placeholder="例：16.57" step="0.01" />
       </div>
       <div class="form-group">
+        <label class="form-label">加權指數</label>
+        <input type="number" class="form-input" id="manualIndex" placeholder="例：33599" min="0" />
+      </div>
+      <div class="form-group">
         <label class="form-label">備註（選填）</label>
-        <input type="text" class="form-input" id="manualNote" placeholder="例：加權33599" />
+        <input type="text" class="form-input" id="manualNote" placeholder="例：其他備註" />
       </div>
       <button class="btn" onclick="addManualEntry()">+ 新增記錄</button>
       <div style="display:flex;gap:8px;margin-top:10px;">
@@ -1116,12 +1120,6 @@ transition: all 0.2s; letter-spacing: 0.05em;
   // ─── Init ───
   document.getElementById('headerDate').textContent = new Date().toLocaleDateString('zh-TW', {year:'numeric',month:'long',day:'numeric',weekday:'short'});
 
-  // Set default date for manual entry
-  document.addEventListener('DOMContentLoaded', () => {
-    const dateInput = document.getElementById('manualDate');
-    if (dateInput) dateInput.value = new Date().toISOString().slice(0,10);
-  });
-
   async function boot() {
     window._fbOnAuth(async (user) => {
       if (user && user.email === ALLOWED_EMAIL) {
@@ -1135,9 +1133,6 @@ transition: all 0.2s; letter-spacing: 0.05em;
         renderAnalytics();
         addLog('login', `登入：${user.email}`);
         showToast(`✓ 歡迎回來 ${user.displayName || ''}`);
-        // Set today's date in manual entry
-        const dateInput = document.getElementById('manualDate');
-        if (dateInput) dateInput.value = new Date().toISOString().slice(0,10);
       } else if (user) {
         document.getElementById('loginErr').textContent = `❌ 此帳號 (${user.email}) 沒有存取權限`;
         document.getElementById('loginScreen').style.display = 'flex';
@@ -1155,20 +1150,31 @@ transition: all 0.2s; letter-spacing: 0.05em;
 
   // ─── Manual Entry (資產記錄) ───
   async function addManualEntry() {
-    const date        = document.getElementById('manualDate').value;
+    const dateRaw     = document.getElementById('manualDate').value.trim();
     const amount      = parseFloat(document.getElementById('manualAmount').value);
     const cost        = parseFloat(document.getElementById('manualCost').value) || null;
     const pnl         = parseFloat(document.getElementById('manualPnl').value);
     const returnRate  = parseFloat(document.getElementById('manualReturnRate').value);
-    const note        = document.getElementById('manualNote').value.trim();
+    const indexVal    = parseFloat(document.getElementById('manualIndex').value);
+    const noteRaw     = document.getElementById('manualNote').value.trim();
 
-    if (!date)              { showToast('⚠ 請選擇日期'); return; }
+    if (!dateRaw) { showToast('⚠ 請輸入日期'); return; }
+    // parse YYYY/MM/DD or YYYY-MM-DD
+    const dateParsed = dateRaw.replace(/\//g, '-');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateParsed)) { showToast('⚠ 日期格式錯誤，請輸入如 2026/01/02'); return; }
+    const date = dateParsed;
     if (!amount || amount <= 0) { showToast('⚠ 請輸入有效的總市值'); return; }
 
-    const entry = { date, amount, note };
-    if (cost)       entry.cost       = cost;
-    if (!isNaN(pnl))        entry.pnl        = pnl;
+    // build note: prepend 加權XXXXX so vsindex chart can parse it
+    const noteParts = [];
+    if (!isNaN(indexVal) && indexVal > 0) noteParts.push(`加權${Math.round(indexVal)}`);
+    if (noteRaw) noteParts.push(noteRaw);
+
+    const entry = { date, amount, note: noteParts.join(' ') };
+    if (cost)              entry.cost       = cost;
+    if (!isNaN(pnl))       entry.pnl        = pnl;
     if (!isNaN(returnRate)) entry.returnRate = returnRate;
+    if (!isNaN(indexVal) && indexVal > 0) entry.index = Math.round(indexVal);
 
     const exists = entries.find(e => e.date === date);
     if (exists) {
@@ -1182,7 +1188,7 @@ transition: all 0.2s; letter-spacing: 0.05em;
     await dbSaveEntries();
     render();
     renderAnalytics();
-    addLog('add', `手動新增：${date} ${fmt(amount)}${returnRate ? ` 報酬${returnRate}%` : ''}${note ? ' · ' + note : ''}`);
+    addLog('add', `手動新增：${date} ${fmt(amount)}${!isNaN(indexVal)&&indexVal>0 ? ` 加權${Math.round(indexVal)}` : ''}${!isNaN(returnRate) ? ` 報酬${returnRate}%` : ''}${noteRaw ? ' · ' + noteRaw : ''}`);
     showToast(`✓ 已新增：${date} ${fmt(amount)}`);
 
     ['totalValue','peakValue','drawdownValue','underwaterBadge'].forEach(id => {
@@ -1195,7 +1201,7 @@ transition: all 0.2s; letter-spacing: 0.05em;
     });
 
     // clear fields but keep date
-    ['manualAmount','manualCost','manualPnl','manualReturnRate','manualNote'].forEach(id => {
+    ['manualAmount','manualCost','manualPnl','manualReturnRate','manualIndex','manualNote'].forEach(id => {
       document.getElementById(id).value = '';
     });
   }
