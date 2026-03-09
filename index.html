@@ -1236,73 +1236,94 @@
     document.getElementById('analyseBtn').disabled = false;
   }
 
-  // ─── 本地文字解析（不需要 API Key）───
+  // ─── 本地文字解析（不需要 API Key，格式彈性）───
   function splitSharesValue(raw) {
     const n = raw.replace(/,/g,'');
     for (let i = n.length - 5; i >= 1; i--) {
-      const v = parseInt(n.slice(i));
-      const s = parseInt(n.slice(0, i));
+      const v = parseInt(n.slice(i)), s = parseInt(n.slice(0,i));
       if (v/s >= 5 && v/s <= 5000 && s >= 100) return [s, v];
     }
     return [null, null];
   }
 
   function parsePortfolioText(text) {
-    const t = text.replace(/,/g, '').replace(/\r/g, '');
+    const clean = text.replace(/\r/g, '');
+    const noComma = clean.replace(/,/g, '');
 
-    // 解析總資產
-    let total_asset = null;
-    for (const p of [/總(?:資產|市值)[^\d]*(\d{5,})/, /資產(?:總值)?[^\d]*(\d{5,})/, /NT\$?\s*(\d{5,})/i]) {
-      const m = t.match(p);
-      if (m) { total_asset = parseInt(m[1]); break; }
+    // ── 日期 ──
+    let date = new Date().toISOString().slice(0,10);
+    const datePats = [
+      /(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/,
+      /(\d{4})年(\d{1,2})月(\d{1,2})日/,
+      /(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/,
+    ];
+    for (const p of datePats) {
+      const m = clean.match(p);
+      if (!m) continue;
+      let y, mo, d;
+      if (p === datePats[2]) { [,mo,d,y] = m; } else { [,y,mo,d] = m; }
+      if (parseInt(y) >= 2020 && parseInt(y) <= 2035) {
+        date = `${y}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+        break;
+      }
     }
 
-    // 解析報酬率
+    // ── 總資產：先找關鍵字，沒有則取最大合理數字 ──
+    let total_asset = null;
+    const kwMatch = noComma.match(/(?:總市值|總資產|市值|資產)[^\d]*(\d{5,9})/);
+    if (kwMatch) {
+      total_asset = parseInt(kwMatch[1]);
+    } else {
+      const allNums = [...noComma.matchAll(/\b(\d{6,9})\b/g)]
+        .map(m => parseInt(m[1])).filter(n => n >= 100000 && n <= 999999999);
+      if (allNums.length) total_asset = Math.max(...allNums);
+    }
+
+    // ── 報酬率：先找關鍵字，沒有則找合理範圍的 % ──
     let return_rate = null;
-    const retM = t.match(/(?:總報酬率?|報酬率?)[^\d\-+]*([+\-]?\d+\.?\d*%)/);
-    if (retM) return_rate = retM[1];
+    const retKw = clean.match(/(?:預估報酬率?|總報酬率?|報酬率?)[^\d\-+%]*([+\-]?\d+\.?\d*)%/);
+    if (retKw) {
+      return_rate = retKw[1] + '%';
+    } else {
+      const pcts = [...clean.matchAll(/([+\-]?\d+\.?\d*)%/g)].map(m => parseFloat(m[1]));
+      const c = pcts.find(p => Math.abs(p) >= 0.01 && Math.abs(p) < 200);
+      if (c != null) return_rate = c + '%';
+    }
 
-    // 解析日期
-    let date = new Date().toISOString().slice(0,10);
-    const dm = t.match(/(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})/);
-    if (dm && parseInt(dm[1]) >= 2020 && parseInt(dm[1]) <= 2035)
-      date = `${dm[1]}-${dm[2].padStart(2,'0')}-${dm[3].padStart(2,'0')}`;
-
-    // 解析加權指數
+    // ── 加權指數 ──
     let index = null;
-    const idxM = t.match(/加權[^\d]*(\d{4,6})/);
+    const idxM = noComma.match(/加權[^\d]*(\d{4,6})/);
     if (idxM) index = parseInt(idxM[1]);
 
-    // 解析個股（支援手機複製的拼接格式）
+    // ── 個股：格式A 分行（代碼開頭）──
     const stocks = [];
-
-    // 先找所有代碼位置
-    const codeRe = /\d{4,6}[A-Z]?(?=[\u4e00-\u9fff])/g;
-    const positions = [];
-    let cm;
-    while ((cm = codeRe.exec(text)) !== null) positions.push({ code: cm[0], pos: cm.index });
-
-    for (let i = 0; i < positions.length; i++) {
-      const seg = text.slice(positions[i].pos, positions[i+1]?.pos ?? text.length);
-      const m = seg.match(/^[\d A-Z]+(.*?)現股([\d,]+)([+\-][\d,]+)([+\-]\d+\.?\d*)%/);
-      if (!m) continue;
-      const [shares, value] = splitSharesValue(m[2]);
-      if (shares && value) {
+    for (const line of clean.split('\n').map(l => l.trim())) {
+      // 寬鬆：代碼 名稱 [任意] 股數 現值 ±損益 ±報酬%
+      const m = line.match(/^(\d{4,6}[A-Z]?)\s+(\S+).*?\s([\d,]{3,})\s+([\d,]{4,})\s+([+\-][\d,]+)\s+([+\-]?\d+\.?\d*)%?/);
+      if (m) {
         stocks.push({
-          code: positions[i].code,
-          name: m[1].trim(),
-          shares, value,
-          pnl: parseInt(m[3].replace(/,/g,'')),
-          pct: parseFloat(m[4])
+          code: m[1], name: m[2],
+          shares: parseInt(m[3].replace(/,/g,'')),
+          value:  parseInt(m[4].replace(/,/g,'')),
+          pnl:   parseInt(m[5].replace(/,/g,'')),
+          pct:   parseFloat(m[6])
         });
       }
     }
 
-    // 備用：分行格式
+    // ── 個股：格式B 手機拼接（含現股/庫存） ──
     if (stocks.length === 0) {
-      for (const line of text.split('\n').map(l => l.trim()).filter(Boolean)) {
-        const m = line.match(/^(\d{4,6}[A-Z]?)\s+(.+?)\s+(\d{3,})[\s,]+(\d{4,})[\s,]+([+\-]\d+)[\s,]+([+\-]?\d+\.?\d*)%?/);
-        if (m) stocks.push({ code: m[1], name: m[2].trim(), shares: parseInt(m[3]), value: parseInt(m[4]), pnl: parseInt(m[5]), pct: parseFloat(m[6]) });
+      const codeRe = /\d{4,6}[A-Z]?(?=[\u4e00-\u9fff])/g;
+      const pos = []; let cm;
+      while ((cm = codeRe.exec(clean)) !== null) pos.push({ code: cm[0], idx: cm.index });
+      for (let i = 0; i < pos.length; i++) {
+        const seg = clean.slice(pos[i].idx, pos[i+1]?.idx ?? clean.length);
+        const m = seg.match(/^[\d A-Z]+(.*?)(?:現股|庫存)?([\d,]+)([+\-][\d,]+)([+\-]\d+\.?\d*)%/);
+        if (!m) continue;
+        const [shares, value] = splitSharesValue(m[2]);
+        if (shares && value)
+          stocks.push({ code: pos[i].code, name: m[1].trim(), shares, value,
+            pnl: parseInt(m[3].replace(/,/g,'')), pct: parseFloat(m[4]) });
       }
     }
 
