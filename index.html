@@ -1055,8 +1055,16 @@
   async function dbLoadAll() {
     try {
       const e = await window._fbGet('entries');
-      entries = e ? Object.values(e).sort((a,b) => a.date.localeCompare(b.date)) : REAL_DATA;
-    } catch { entries = REAL_DATA; }
+      if (e === null) {
+        // 從未寫入過 → 用預設資料初始化
+        entries = REAL_DATA;
+        await dbSaveEntries(); // 寫入一次，之後就不再 fallback
+      } else {
+        // 有資料（包含空物件 {} 或含 __cleared 標記 = 使用者清空過）
+        const vals = Object.values(e).filter(v => typeof v === 'object' && v.date);
+        entries = vals.sort((a,b) => a.date.localeCompare(b.date));
+      }
+    } catch { entries = []; }
     try {
       const h = await window._fbGet('holdings');
       holdings = h || INIT_HOLDINGS;
@@ -1313,7 +1321,10 @@
     // 從 Firebase 重新讀取，確保本地狀態與資料庫一致
     try {
       const fresh = await window._fbGet('entries');
-      if (fresh) entries = Object.values(fresh).sort((a,b) => a.date.localeCompare(b.date));
+      if (fresh) {
+        const vals = Object.values(fresh).filter(v => typeof v === 'object' && v.date);
+        entries = vals.sort((a,b) => a.date.localeCompare(b.date));
+      }
     } catch {}
 
     addLog('del', `刪除記錄：${e.date} ${fmt(e.amount)} ${e.note || ''}`);
@@ -1326,7 +1337,8 @@
   async function clearAll() {
     if (!confirm('確定要清除所有資料？此動作無法復原。')) return;
     entries = [];
-    await dbSaveEntries();
+    // 寫入 __cleared 標記，讓 dbLoadAll 知道是使用者清空，不要 fallback 到 REAL_DATA
+    await window._fbSet('entries', { __cleared: true });
     render();
     renderAnalytics();
     showToast('已清除所有資料');
