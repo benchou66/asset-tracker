@@ -2131,50 +2131,59 @@
     if (entries.length < 2) return;
     const sorted = [...entries].sort((a,b) => a.date.localeCompare(b.date));
 
-    // Group entries by year
-    const byYear = {};
+    const yearBase = {};
     sorted.forEach(e => {
       const yr = e.date.slice(0, 4);
-      if (!byYear[yr]) byYear[yr] = { first: e, last: e };
-      byYear[yr].last = e;
+      if (!yearBase[yr]) yearBase[yr] = e;
     });
 
-    const years = Object.keys(byYear).sort();
-    const labels = [], data = [], colors = [], tooltipInfo = [];
+    const labels = [], data = [], tooltipInfo = [];
 
-    years.forEach(yr => {
-      const { first, last } = byYear[yr];
-      // skip if only one entry (same date = no return to calculate)
-      if (first.date === last.date) return;
-      const ret = (last.amount - first.amount) / first.amount * 100;
-      labels.push(yr);
-      data.push(parseFloat(ret.toFixed(2)));
-      colors.push(ret >= 0 ? 'rgba(5,150,105,0.75)' : 'rgba(220,38,38,0.75)');
-      tooltipInfo.push({ first, last });
+    sorted.forEach(e => {
+      const yr = e.date.slice(0, 4);
+      const base = yearBase[yr];
+      // first entry of year = 0%
+      if (e.date === base.date) {
+        labels.push(e.date.slice(0, 7));
+        data.push(0);
+        tooltipInfo.push({ base, current: e, cagr: 0, years: 0 });
+        return;
+      }
+      const years = (new Date(e.date) - new Date(base.date)) / (365.25 * 86400000);
+      if (years < 0.01) return;
+      const cagr = (Math.pow(e.amount / base.amount, 1 / years) - 1) * 100;
+      labels.push(e.date.slice(0, 7));
+      data.push(parseFloat(cagr.toFixed(2)));
+      tooltipInfo.push({ base, current: e, cagr, years });
     });
 
     if (!labels.length) {
-      document.getElementById('chart-annual').innerHTML = '<div class="empty">資料不足，每年需至少兩筆記錄</div>';
+      document.getElementById('chart-annual').innerHTML = '<div class="empty">資料不足，需至少兩筆記錄</div>';
       return;
     }
 
-    const canvas = document.getElementById('annualChart');
-    // restore canvas if replaced by empty div
-    if (!canvas) {
-      document.getElementById('chart-annual').innerHTML = '<div class="chart-wrap" style="height:280px;"><canvas id="annualChart"></canvas></div>';
+    const wrap = document.getElementById('chart-annual');
+    if (!wrap.querySelector('canvas')) {
+      wrap.innerHTML = '<div class="chart-wrap" style="height:280px;"><canvas id="annualChart"></canvas></div>';
     }
 
     chartInstances.annual = new Chart(document.getElementById('annualChart'), {
-      type: 'bar',
+      type: 'line',
       data: {
         labels,
         datasets: [{
-          label: '年度報酬率 %',
+          label: '年化報酬率 (CAGR, 當年基準) %',
           data,
-          backgroundColor: colors,
-          borderColor: colors.map(c => c.replace('0.75', '1')),
-          borderWidth: 1.5,
-          borderRadius: 6,
+          borderColor: '#7c3aed',
+          backgroundColor: 'rgba(124,58,237,0.07)',
+          fill: true, tension: 0.35,
+          pointRadius: 5,
+          pointBackgroundColor: '#fff',
+          pointBorderColor: '#7c3aed',
+          pointBorderWidth: 2,
+          segment: {
+            borderColor: ctx => ctx.p1.parsed.y < 0 ? 'rgba(220,38,38,0.7)' : '#7c3aed',
+          }
         }]
       },
       options: {
@@ -2182,22 +2191,27 @@
         plugins: {
           legend: { labels: { font: { family: 'Space Mono', size: 11 }, color: '#64748b', boxWidth: 14 } },
           tooltip: { callbacks: {
-            label: ctx => ` ${ctx.raw >= 0 ? '+' : ''}${ctx.raw}%`,
+            label: ctx => ` CAGR：${ctx.raw >= 0 ? '+' : ''}${ctx.raw}%`,
             afterLabel: ctx => {
               const info = tooltipInfo[ctx.dataIndex];
+              if (info.years === 0) return ` 年初基準：${fmt(info.base.amount)}`;
               return [
-                ` 起：${info.first.date}  ${fmt(info.first.amount)}`,
-                ` 迄：${info.last.date}  ${fmt(info.last.amount)}`
+                ` 基準：${info.base.date}  ${fmt(info.base.amount)}`,
+                ` 現在：${info.current.date}  ${fmt(info.current.amount)}`,
+                ` 經過：${info.years.toFixed(2)} 年`
               ];
             }
           }}
         },
         scales: {
-          x: { grid: { display: false }, ticks: { font: { family: 'Space Mono', size: 11 }, color: '#64748b' } },
+          x: { grid: { display: false }, ticks: { font: { family: 'Space Mono', size: 10 }, color: '#64748b', maxTicksLimit: 10 } },
           y: {
             grid: { color: '#dde3ec' },
             ticks: { font: { family: 'Space Mono', size: 10 }, color: '#64748b', callback: v => v + '%' },
-            afterDataLimits(scale) { scale.max = Math.max(scale.max, 5); scale.min = Math.min(scale.min, -5); }
+            afterDataLimits(scale) {
+              scale.max = Math.max(scale.max, 5);
+              scale.min = Math.min(scale.min, -5);
+            }
           }
         }
       }
