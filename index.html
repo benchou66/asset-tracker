@@ -1140,14 +1140,17 @@
     const result = {};
     const lines = raw.split('\n').map(l => l.trim()).filter(Boolean);
     for (const line of lines) {
-      const col = line.indexOf(':');
+      // support both half-width : and full-width ：
+      const col = line.search(/[:：]/);
       if (col < 0) continue;
       const key = line.slice(0, col).trim();
       const val = line.slice(col + 1).trim();
       const num = parseFloat(val.replace(/[,\s$NTDntd+]/g, ''));
 
       if (/日期/.test(key)) {
-        result.date = val.replace(/\//g, '-').replace(/[^\d-]/g, '').slice(0, 10);
+        // extract YYYY/MM/DD or YYYY-MM-DD from value
+        const m = val.match(/(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
+        if (m) result.date = `${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`;
       } else if (/加權/.test(key)) {
         result.index = num;
       } else if (/總市值|市值/.test(key)) {
