@@ -883,7 +883,36 @@
       <div style="display:flex;gap:8px;align-items:center;">
         <div style="font-family:var(--font-mono);font-size:0.68rem;color:var(--muted);" id="holdingsDate"></div>
         <button class="btn-sm" style="margin-top:0;" onclick="toggleHoldingsForm()">+ 新增個股</button>
+        <button class="btn-sm" style="margin-top:0;border-color:rgba(124,58,237,0.4);color:var(--accent2);" onclick="toggleImportForm()">⬇ 匯入</button>
         <button class="btn-sm" style="margin-top:0;color:var(--red);border-color:rgba(220,38,38,0.3);" onclick="clearHoldings()">✕ 清除明細</button>
+      </div>
+    </div>
+
+    <!-- Import panel -->
+    <div id="holdingsImport" style="display:none;padding:20px;border-bottom:1px solid var(--border);background:#faf5ff;">
+      <div style="font-family:var(--font-mono);font-size:0.68rem;color:var(--accent2);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:12px;">⬇ 批次匯入個股</div>
+
+      <!-- Schema hint -->
+      <div style="background:white;border:1px dashed #c4b5fd;border-radius:8px;padding:12px 14px;margin-bottom:12px;">
+        <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--muted);margin-bottom:6px;letter-spacing:0.08em;">格式（每行一檔，/ 分隔）</div>
+        <pre id="importTemplate" style="font-family:var(--font-mono);font-size:0.73rem;color:var(--text);line-height:1.8;margin:0;white-space:pre-wrap;">股票代號/股票名稱/持股數量/現值 (NTD)/預估損益/預估報酬率
+0050/元大台灣50/17,000/1,135,403/+51,517/+4.75%</pre>
+        <button onclick="copyImportTemplate()" style="margin-top:8px;padding:5px 12px;background:transparent;border:1px solid #c4b5fd;border-radius:6px;font-family:var(--font-mono);font-size:0.68rem;color:var(--accent2);cursor:pointer;">📋 複製格式</button>
+      </div>
+
+      <textarea id="importTextarea"
+        placeholder="貼上個股資料（可多行，每行一檔）..."
+        style="width:100%;min-height:140px;padding:12px;border:1.5px solid #c4b5fd;border-radius:10px;font-family:var(--font-mono);font-size:0.76rem;color:var(--text);background:white;box-sizing:border-box;resize:vertical;outline:none;line-height:1.8;transition:border-color 0.2s;"
+        onfocus="this.style.borderColor='var(--accent2)'"
+        onblur="this.style.borderColor='#c4b5fd'"
+        oninput="previewImport()"></textarea>
+
+      <!-- Import preview -->
+      <div id="importPreview" style="display:none;margin-top:10px;font-family:var(--font-mono);font-size:0.72rem;color:var(--muted);"></div>
+
+      <div style="display:flex;gap:8px;margin-top:12px;">
+        <button onclick="runImportHoldings()" style="flex:1;padding:11px;background:var(--accent2);color:#fff;border:none;border-radius:10px;font-family:var(--font-mono);font-size:0.82rem;font-weight:600;cursor:pointer;">⬇ 確認匯入</button>
+        <button onclick="toggleImportForm()" style="padding:11px 18px;background:white;border:1px solid var(--border);border-radius:10px;font-family:var(--font-mono);font-size:0.78rem;color:var(--muted);cursor:pointer;">取消</button>
       </div>
     </div>
 
@@ -1552,13 +1581,80 @@
 
   function toggleHoldingsForm() {
     const f = document.getElementById('holdingsForm');
+    const imp = document.getElementById('holdingsImport');
     if (f.style.display === 'none') {
+      imp.style.display = 'none';
       editingHoldingIdx = -1;
       clearHoldingForm();
       f.style.display = 'block';
     } else {
       f.style.display = 'none';
     }
+  }
+
+  function toggleImportForm() {
+    const imp = document.getElementById('holdingsImport');
+    const f   = document.getElementById('holdingsForm');
+    if (imp.style.display === 'none') {
+      f.style.display = 'none';
+      imp.style.display = 'block';
+    } else {
+      imp.style.display = 'none';
+      document.getElementById('importTextarea').value = '';
+      document.getElementById('importPreview').style.display = 'none';
+    }
+  }
+
+  function copyImportTemplate() {
+    const text = document.getElementById('importTemplate').textContent;
+    navigator.clipboard.writeText(text).then(() => showToast('✓ 已複製格式'));
+  }
+
+  function parseImportLine(line) {
+    const parts = line.split('/');
+    if (parts.length < 4) return null;
+    const clean = s => parseFloat(s.replace(/[,+%\s$NTDntd]/g, ''));
+    return {
+      code:   parts[0].trim(),
+      name:   parts[1].trim(),
+      shares: clean(parts[2]) || 0,
+      value:  clean(parts[3]) || 0,
+      pnl:    parts[4] != null ? clean(parts[4]) : 0,
+      pct:    parts[5] != null ? clean(parts[5]) : 0,
+    };
+  }
+
+  function previewImport() {
+    const raw = document.getElementById('importTextarea').value.trim();
+    const preview = document.getElementById('importPreview');
+    if (!raw) { preview.style.display = 'none'; return; }
+
+    const lines = raw.split('\n').map(l => l.trim()).filter(l => l && !/^股票代號/.test(l));
+    const parsed = lines.map(parseImportLine).filter(Boolean);
+
+    if (!parsed.length) { preview.style.display = 'none'; return; }
+
+    preview.style.display = 'block';
+    preview.innerHTML = `偵測到 <strong style="color:var(--accent2)">${parsed.length}</strong> 檔個股：`
+      + parsed.map(s => `<span style="display:inline-block;margin:4px 6px 0 0;padding:3px 8px;background:white;border:1px solid #c4b5fd;border-radius:5px;color:var(--text);">${s.code} ${s.name}</span>`).join('');
+  }
+
+  async function runImportHoldings() {
+    const raw = document.getElementById('importTextarea').value.trim();
+    if (!raw) { showToast('⚠ 請貼上資料'); return; }
+
+    const lines = raw.split('\n').map(l => l.trim()).filter(l => l && !/^股票代號/.test(l));
+    const parsed = lines.map(parseImportLine).filter(Boolean);
+    if (!parsed.length) { showToast('⚠ 無法解析，請確認格式'); return; }
+
+    holdings.stocks = parsed;
+    holdings.date   = new Date().toISOString().slice(0, 10);
+    await dbSaveHoldings();
+    renderHoldings();
+    renderAnalytics();
+    addLog('add', `批次匯入 ${parsed.length} 檔個股`);
+    showToast(`✓ 匯入完成：${parsed.length} 檔個股`);
+    toggleImportForm();
   }
 
   function cancelHoldingsForm() {
