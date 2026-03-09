@@ -1237,31 +1237,19 @@
   }
 
   // ─── 本地文字解析（不需要 API Key，格式彈性）───
-  function splitSharesValue(raw) {
-    const n = raw.replace(/,/g,'');
-    for (let i = n.length - 5; i >= 1; i--) {
-      const v = parseInt(n.slice(i)), s = parseInt(n.slice(0,i));
-      if (v/s >= 5 && v/s <= 5000 && s >= 100) return [s, v];
-    }
-    return [null, null];
-  }
-
   function parsePortfolioText(text) {
     const clean = text.replace(/\r/g, '');
     const noComma = clean.replace(/,/g, '');
 
     // ── 日期 ──
     let date = new Date().toISOString().slice(0,10);
-    const datePats = [
+    for (const p of [
       /(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/,
       /(\d{4})年(\d{1,2})月(\d{1,2})日/,
-      /(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/,
-    ];
-    for (const p of datePats) {
+    ]) {
       const m = clean.match(p);
       if (!m) continue;
-      let y, mo, d;
-      if (p === datePats[2]) { [,mo,d,y] = m; } else { [,y,mo,d] = m; }
+      const [,y,mo,d] = m;
       if (parseInt(y) >= 2020 && parseInt(y) <= 2035) {
         date = `${y}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
         break;
@@ -1270,7 +1258,7 @@
 
     // ── 總資產：先找關鍵字，沒有則取最大合理數字 ──
     let total_asset = null;
-    const kwMatch = noComma.match(/(?:總市值|總資產|市值|資產)[^\d]*(\d{5,9})/);
+    const kwMatch = noComma.match(/(?:總市值|總資產|市值)[^\d]*(\d{5,9})/);
     if (kwMatch) {
       total_asset = parseInt(kwMatch[1]);
     } else {
@@ -1295,10 +1283,12 @@
     const idxM = noComma.match(/加權[^\d]*(\d{4,6})/);
     if (idxM) index = parseInt(idxM[1]);
 
-    // ── 個股：格式A 分行（代碼開頭）──
+    // ── 個股解析 ──
     const stocks = [];
-    for (const line of clean.split('\n').map(l => l.trim())) {
-      // 寬鬆：代碼 名稱 [任意] 股數 現值 ±損益 ±報酬%
+
+    // 格式A：分行格式（代碼 + 空白 + 名稱 + 數字）
+    const lines = clean.split('\n').map(l => l.trim()).filter(Boolean);
+    for (const line of lines) {
       const m = line.match(/^(\d{4,6}[A-Z]?)\s+(\S+).*?\s([\d,]{3,})\s+([\d,]{4,})\s+([+\-][\d,]+)\s+([+\-]?\d+\.?\d*)%?/);
       if (m) {
         stocks.push({
@@ -1311,19 +1301,64 @@
       }
     }
 
-    // ── 個股：格式B 手機拼接（含現股/庫存） ──
+    // 格式B：拼接格式（代碼緊接中文名稱，無空格分隔）
     if (stocks.length === 0) {
-      const codeRe = /\d{4,6}[A-Z]?(?=[\u4e00-\u9fff])/g;
-      const pos = []; let cm;
-      while ((cm = codeRe.exec(clean)) !== null) pos.push({ code: cm[0], idx: cm.index });
-      for (let i = 0; i < pos.length; i++) {
-        const seg = clean.slice(pos[i].idx, pos[i+1]?.idx ?? clean.length);
-        const m = seg.match(/^[\d A-Z]+(.*?)(?:現股|庫存)?([\d,]+)([+\-][\d,]+)([+\-]\d+\.?\d*)%/);
-        if (!m) continue;
-        const [shares, value] = splitSharesValue(m[2]);
-        if (shares && value)
-          stocks.push({ code: pos[i].code, name: m[1].trim(), shares, value,
-            pnl: parseInt(m[3].replace(/,/g,'')), pct: parseFloat(m[4]) });
+      const codeRe = /(\d{4,6}[A-Z]?)(?=[\u4e00-\u9fff])/g;
+      const positions = [];
+      let cm;
+      while ((cm = codeRe.exec(clean)) !== null) {
+        const code = cm[1];
+        // 排除日期年份
+        if (/^\d{4}$/.test(code) && parseInt(code) > 2000 && parseInt(code) < 2100) continue;
+        positions.push({ code, pos: cm.index });
+      }
+
+      for (let i = 0; i < positions.length; i++) {
+        const seg = clean.slice(positions[i].pos + positions[i].code.length, positions[i+1]?.pos ?? clean.length);
+
+        // 找第一個千分位逗號，取其實際逗號位置
+        const commaM = seg.match(/(\d{1,3}),(\d{3})/);
+        if (!commaM) {
+          // 無逗號（最後一筆可能缺損益）
+          const numM = seg.match(/^(.*\D)(\d{5,9})$/);
+          if (numM) stocks.push({ code: positions[i].code, name: numM[1].trim(), shares: null, value: parseInt(numM[2]), pnl: null, pct: null });
+          continue;
+        }
+
+        // 逗號實際位置 = 匹配起點 + cm[1].length
+        const matchStart = seg.indexOf(commaM[0]);
+        const commaIdx = matchStart + commaM[1].length;
+
+        // 找逗號前連續數字的起點
+        let numStart = commaIdx;
+        while (numStart > 0 && /\d/.test(seg[numStart-1])) numStart--;
+
+        const name = seg.slice(0, numStart).trim();
+        const fullPrefix = seg.slice(numStart, commaIdx);
+        const combined = fullPrefix + commaM[2]; // 含名稱尾數+股數
+
+        // 現值
+        const rest = seg.slice(commaIdx + 1 + 3);
+        const valM = rest.match(/^([\d,]+)/);
+        if (!valM) continue;
+        const value = parseInt(valM[1].replace(/,/g,''));
+
+        // 損益 + 報酬率
+        const afterVal = rest.slice(valM[0].length);
+        const pnlM = afterVal.match(/([+\-][\d,]+)([+\-]\d+\.?\d*)%/);
+        const pnl = pnlM ? parseInt(pnlM[1].replace(/,/g,'')) : null;
+        const pct = pnlM ? parseFloat(pnlM[2]) : null;
+
+        // 從 combined 找正確股數：每股價格合理(5~5000) 且是1000倍數
+        let shares = null;
+        for (let k = combined.length; k >= 1; k--) {
+          const candidate = parseInt(combined.slice(combined.length - k));
+          if (candidate < 1000 || candidate % 1000 !== 0) continue;
+          const price = value / candidate;
+          if (price >= 5 && price <= 5000) { shares = candidate; break; }
+        }
+
+        stocks.push({ code: positions[i].code, name, shares, value, pnl, pct });
       }
     }
 
