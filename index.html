@@ -701,8 +701,9 @@ transition: all 0.2s; letter-spacing: 0.05em;
     const provider = new GoogleAuthProvider();
 
     // DB helpers
-    window._fbSet = (path, val) => set(ref(db, path), val);
-    window._fbGet = (path)      => get(ref(db, path)).then(s => s.exists() ? s.val() : null);
+    window._fbSet    = (path, val) => set(ref(db, path), val);
+    window._fbGet    = (path)      => get(ref(db, path)).then(s => s.exists() ? s.val() : null);
+    window._fbRemove = (path)      => set(ref(db, path), null); // null = delete in RTDB
 
     // Auth helpers
     window._fbSignIn  = () => signInWithPopup(auth, provider);
@@ -1044,8 +1045,19 @@ transition: all 0.2s; letter-spacing: 0.05em;
 
   // ─── Firebase Storage helpers ───
   async function dbSaveEntries() {
-    try { await window._fbSet('entries', entries); }
-    catch(e) { console.warn('FB save entries:', e); }
+    // 以日期為 key 存成物件，避免 Firebase 陣列 index 問題
+    try {
+      const obj = {};
+      entries.forEach(e => { obj[e.date.replace(/-/g, '_')] = e; });
+      await window._fbSet('entries', obj);
+    } catch(e) { console.warn('FB save entries:', e); }
+  }
+  async function dbDeleteEntry(date) {
+    // 直接刪除該日期的 key
+    try {
+      const key = date.replace(/-/g, '_');
+      await window._fbRemove('entries/' + key);
+    } catch(e) { console.warn('FB delete entry:', e); }
   }
   async function dbSaveHoldings() {
     try { await window._fbSet('holdings', holdings); }
@@ -1298,11 +1310,11 @@ transition: all 0.2s; letter-spacing: 0.05em;
     if (!confirm('確定要刪除這筆記錄？')) return;
     const e = entries[idx];
     entries.splice(idx, 1);
-    await dbSaveEntries();           // 等 Firebase 寫入完成
+    await dbDeleteEntry(e.date);     // 直接刪除 Firebase 中該 key
     addLog('del', `刪除記錄：${e.date} ${fmt(e.amount)} ${e.note || ''}`);
-    render();                        // 走勢圖 + 四張卡片 + 歷史記錄
-    renderHoldings();                // 個股明細（總計列會跟著更新）
-    renderAnalytics();               // 分析圖表
+    render();
+    renderHoldings();
+    renderAnalytics();
     showToast('✓ 已刪除，資料庫已同步');
   }
 
