@@ -730,6 +730,24 @@
   </div>
 </div>
 
+<!-- ── API Key Modal ── -->
+<div id="apiKeyModal" style="display:none;position:fixed;inset:0;z-index:8888;background:rgba(0,0,0,0.45);display:none;align-items:center;justify-content:center;">
+  <div style="background:var(--surface);border-radius:16px;padding:32px 28px;max-width:420px;width:90%;box-shadow:0 8px 40px rgba(0,0,0,0.18);">
+    <div style="font-family:var(--font-mono);font-size:1rem;font-weight:700;letter-spacing:0.1em;margin-bottom:6px;color:var(--text);">⚙ API 金鑰設定</div>
+    <div style="font-size:0.78rem;color:var(--muted);margin-bottom:20px;line-height:1.6;">
+      截圖 OCR 功能需要 Anthropic API Key。<br>
+      取得方式：<a href="https://console.anthropic.com/keys" target="_blank" style="color:var(--accent);">console.anthropic.com/keys</a>
+    </div>
+    <input id="apiKeyInput" type="password" placeholder="sk-ant-api03-..." autocomplete="off"
+      style="width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:10px;font-family:var(--font-mono);font-size:0.82rem;color:var(--text);background:var(--surface2);box-sizing:border-box;outline:none;margin-bottom:8px;">
+    <div id="apiKeyStatus" style="font-size:0.75rem;color:var(--muted);min-height:18px;margin-bottom:16px;"></div>
+    <div style="display:flex;gap:10px;">
+      <button onclick="saveApiKey()" style="flex:1;padding:11px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-family:var(--font-mono);font-size:0.85rem;font-weight:600;cursor:pointer;">儲存</button>
+      <button onclick="closeApiKeyModal()" style="flex:1;padding:11px;background:var(--surface2);color:var(--muted);border:1px solid var(--border);border-radius:10px;font-family:var(--font-mono);font-size:0.85rem;cursor:pointer;">取消</button>
+    </div>
+  </div>
+</div>
+
 <!-- ── Main App ── -->
 <div id="appWrapper">
 <div class="wrapper">
@@ -737,6 +755,7 @@
     <div class="logo">ASSET<span>/</span>TRACKER</div>
     <div style="display:flex;align-items:center;gap:14px;">
       <div class="header-date" id="headerDate"></div>
+      <button class="btn-logout" onclick="openApiKeyModal()" style="border-color:var(--accent);color:var(--accent);" title="設定 API Key">⚙ API</button>
       <button class="btn-logout" onclick="doSignOut()">登出</button>
     </div>
   </header>
@@ -1106,6 +1125,7 @@
         document.getElementById('appWrapper').style.display = 'block';
         showToast('⏳ 載入資料中...');
         await dbLoadAll();
+        await loadApiKey();
         render();
         renderHoldings();
         renderLog();
@@ -1129,7 +1149,51 @@
   if (window._fbReady) { boot(); }
   else { window.addEventListener('firebase-ready', boot); }
 
-  // ─── AI Dual Screenshot OCR ───
+  // ─── API Key Management ───
+  let _apiKey = '';
+
+  async function loadApiKey() {
+    try {
+      const k = await window._fbGet('settings/apiKey');
+      _apiKey = k || '';
+      if (_apiKey) document.getElementById('apiKeyInput').value = _apiKey;
+    } catch {}
+  }
+
+  function openApiKeyModal() {
+    const modal = document.getElementById('apiKeyModal');
+    modal.style.display = 'flex';
+    if (_apiKey) document.getElementById('apiKeyInput').value = _apiKey;
+    document.getElementById('apiKeyStatus').textContent = _apiKey ? '✓ 已設定 API Key' : '尚未設定';
+  }
+
+  function closeApiKeyModal() {
+    document.getElementById('apiKeyModal').style.display = 'none';
+  }
+
+  async function saveApiKey() {
+    const val = document.getElementById('apiKeyInput').value.trim();
+    if (!val.startsWith('sk-ant-')) {
+      document.getElementById('apiKeyStatus').textContent = '⚠ 格式不對，應以 sk-ant- 開頭';
+      document.getElementById('apiKeyStatus').style.color = 'var(--red)';
+      return;
+    }
+    _apiKey = val;
+    try {
+      await window._fbSet('settings/apiKey', val);
+      document.getElementById('apiKeyStatus').textContent = '✓ 已儲存';
+      document.getElementById('apiKeyStatus').style.color = 'var(--green)';
+      setTimeout(closeApiKeyModal, 800);
+      showToast('✓ API Key 已儲存');
+    } catch(e) {
+      document.getElementById('apiKeyStatus').textContent = '儲存失敗：' + e.message;
+    }
+  }
+
+  // 點 modal 背景關閉
+  document.getElementById('apiKeyModal').addEventListener('click', function(e) {
+    if (e.target === this) closeApiKeyModal();
+  });
   let ocrPending = null;
   let slotData = { 1: null, 2: null }; // base64 dataURLs
 
@@ -1230,10 +1294,24 @@
   ]
 }`;
 
+    if (!_apiKey) {
+      openApiKeyModal();
+      document.getElementById('apiKeyStatus').textContent = '⚠ 請先設定 API Key 才能使用 OCR 功能';
+      document.getElementById('apiKeyStatus').style.color = 'var(--red)';
+      document.getElementById('ocrLoading').style.display = 'none';
+      document.getElementById('analyseBtn').disabled = false;
+      return;
+    }
+
     try {
       const res = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': _apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-allow-browser': 'true'
+        },
         body: JSON.stringify({
           model: 'claude-sonnet-4-20250514',
           max_tokens: 1200,
@@ -1722,7 +1800,12 @@
     try {
       const res = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': _apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-allow-browser': 'true'
+        },
         body: JSON.stringify({
           model: 'claude-sonnet-4-20250514',
           max_tokens: 1000,
