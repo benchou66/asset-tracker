@@ -681,7 +681,7 @@ transition: all 0.2s; letter-spacing: 0.05em;
 
   <script type="module">
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-    import { getDatabase, ref, set, get } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
+    import { getDatabase, ref, set, get, remove, update } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
     import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
       from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 
@@ -700,10 +700,11 @@ transition: all 0.2s; letter-spacing: 0.05em;
     const auth     = getAuth(app);
     const provider = new GoogleAuthProvider();
 
-    // DB helpers
+    // DB helpers — 全部掛到 window 讓主 script 使用
     window._fbSet    = (path, val) => set(ref(db, path), val);
     window._fbGet    = (path)      => get(ref(db, path)).then(s => s.exists() ? s.val() : null);
-    window._fbRemove = (path)      => set(ref(db, path), null); // null = delete in RTDB
+    window._fbRemove = (path)      => remove(ref(db, path));   // 真正的 remove
+    window._fbUpdate = (path, val) => update(ref(db, path), val);
 
     // Auth helpers
     window._fbSignIn  = () => signInWithPopup(auth, provider);
@@ -1053,11 +1054,19 @@ transition: all 0.2s; letter-spacing: 0.05em;
     } catch(e) { console.warn('FB save entries:', e); }
   }
   async function dbDeleteEntry(date) {
-    // 直接刪除該日期的 key
+    const key = date.replace(/-/g, '_');
     try {
-      const key = date.replace(/-/g, '_');
+      // Step 1: 直接刪除該 key
       await window._fbRemove('entries/' + key);
-    } catch(e) { console.warn('FB delete entry:', e); }
+      // Step 2: 再整體覆寫一次確保一致（雙保險）
+      const obj = {};
+      entries.forEach(e => { obj[e.date.replace(/-/g, '_')] = e; });
+      await window._fbSet('entries', obj);
+    } catch(e) {
+      console.warn('FB delete entry:', e);
+      // fallback: 整體覆寫
+      await dbSaveEntries();
+    }
   }
   async function dbSaveHoldings() {
     try { await window._fbSet('holdings', holdings); }
@@ -1310,7 +1319,16 @@ transition: all 0.2s; letter-spacing: 0.05em;
     if (!confirm('確定要刪除這筆記錄？')) return;
     const e = entries[idx];
     entries.splice(idx, 1);
-    await dbDeleteEntry(e.date);     // 直接刪除 Firebase 中該 key
+
+    // 刪除並驗證
+    await dbDeleteEntry(e.date);
+
+    // 從 Firebase 重新讀取，確保本地狀態與資料庫一致
+    try {
+      const fresh = await window._fbGet('entries');
+      if (fresh) entries = Object.values(fresh).sort((a,b) => a.date.localeCompare(b.date));
+    } catch {}
+
     addLog('del', `刪除記錄：${e.date} ${fmt(e.amount)} ${e.note || ''}`);
     render();
     renderHoldings();
