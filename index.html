@@ -764,9 +764,9 @@
       <div class="card-sub" id="drawdownSub">距離前高</div>
     </div>
     <div class="card">
-      <div class="card-label">套牢狀態</div>
+      <div class="card-label">Underwater（套牢時間）</div>
       <div id="underwaterBadge">—</div>
-      <div class="card-sub" id="underwaterMonths"></div>
+      <div class="card-sub" id="underwaterMonths" style="line-height:1.5;"></div>
     </div>
   </div>
 
@@ -799,9 +799,9 @@
             <div style="font-size:0.62rem;color:var(--muted);margin-top:4px;line-height:1.5;">從跌破前高到重新回到前高所花的最長時間</div>
           </div>
           <div class="stat-box">
-            <div class="stat-box-label">總報酬率</div>
+            <div class="stat-box-label">今年報酬率 (YTD)</div>
             <div class="stat-box-value" id="totalReturn">—</div>
-            <div style="font-size:0.62rem;color:var(--muted);margin-top:4px;line-height:1.5;">從第一筆記錄至今的總漲跌幅</div>
+            <div style="font-size:0.62rem;color:var(--muted);margin-top:4px;line-height:1.5;">從今年第一筆記錄至今的漲跌幅</div>
           </div>
           <div class="stat-box">
             <div class="stat-box-label">記錄筆數</div>
@@ -1458,11 +1458,20 @@
     document.getElementById('underwaterBadge').innerHTML = isUnderwater
       ? `<div class="underwater-badge"><div class="dot"></div>套牢中</div>`
       : `<div class="underwater-badge safe"><div class="dot"></div>創新高</div>`;
-    document.getElementById('underwaterMonths').textContent = isUnderwater ? `已套牢 ${uwMonths} 個月` : '';
+    document.getElementById('underwaterMonths').textContent = isUnderwater
+      ? `從跌破前高開始已過 ${uwMonths} 個月，尚未回到前高`
+      : '目前處於歷史高點';
 
     document.getElementById('maxDD').textContent = (maxDD*100).toFixed(1)+'%';
-    document.getElementById('totalReturn').textContent = (totalRet >= 0 ? '+' : '') + (totalRet*100).toFixed(1)+'%';
-    document.getElementById('totalReturn').className = 'stat-box-value ' + (totalRet >= 0 ? 'green' : 'red');
+    // 預估報酬率：今年第一筆到最新一筆的資產漲跌幅 (YTD)
+    const thisYear = new Date().getFullYear().toString();
+    const ytdFirst = entries.find(e => e.date.startsWith(thisYear));
+    const ytdLast  = entries.filter(e => e.date.startsWith(thisYear)).pop();
+    const ytdReturn = (ytdFirst && ytdLast && ytdFirst.date !== ytdLast.date)
+      ? (ytdLast.amount - ytdFirst.amount) / ytdFirst.amount
+      : totalRet;
+    document.getElementById('totalReturn').textContent = (ytdReturn >= 0 ? '+' : '') + (ytdReturn * 100).toFixed(2) + '%';
+    document.getElementById('totalReturn').className = 'stat-box-value ' + (ytdReturn >= 0 ? 'green' : 'red');
     document.getElementById('entryCount').textContent = entries.length;
 
     if (data.length >= 2)
@@ -2122,41 +2131,50 @@
     if (entries.length < 2) return;
     const sorted = [...entries].sort((a,b) => a.date.localeCompare(b.date));
 
-    const yearBase = {};
+    // Group entries by year
+    const byYear = {};
     sorted.forEach(e => {
-      const yr = e.date.slice(0,4);
-      if (!yearBase[yr]) yearBase[yr] = e;
+      const yr = e.date.slice(0, 4);
+      if (!byYear[yr]) byYear[yr] = { first: e, last: e };
+      byYear[yr].last = e;
     });
 
-    const labels = [], data = [];
-    sorted.forEach(e => {
-      const yr = e.date.slice(0,4);
-      const base = yearBase[yr];
-      if (e.date === base.date) return;
-      const years = (new Date(e.date) - new Date(base.date)) / (365.25 * 86400000);
-      if (years < 0.05) return;
-      const cagr = (Math.pow(e.amount / base.amount, 1 / years) - 1) * 100;
-      labels.push(e.date.slice(0,7));
-      data.push(parseFloat(cagr.toFixed(2)));
+    const years = Object.keys(byYear).sort();
+    const labels = [], data = [], colors = [], tooltipInfo = [];
+
+    years.forEach(yr => {
+      const { first, last } = byYear[yr];
+      // skip if only one entry (same date = no return to calculate)
+      if (first.date === last.date) return;
+      const ret = (last.amount - first.amount) / first.amount * 100;
+      labels.push(yr);
+      data.push(parseFloat(ret.toFixed(2)));
+      colors.push(ret >= 0 ? 'rgba(5,150,105,0.75)' : 'rgba(220,38,38,0.75)');
+      tooltipInfo.push({ first, last });
     });
 
     if (!labels.length) {
-      document.getElementById('chart-annual').innerHTML = '<div class="empty">資料不足，無法計算年化報酬率</div>';
+      document.getElementById('chart-annual').innerHTML = '<div class="empty">資料不足，每年需至少兩筆記錄</div>';
       return;
     }
 
+    const canvas = document.getElementById('annualChart');
+    // restore canvas if replaced by empty div
+    if (!canvas) {
+      document.getElementById('chart-annual').innerHTML = '<div class="chart-wrap" style="height:280px;"><canvas id="annualChart"></canvas></div>';
+    }
+
     chartInstances.annual = new Chart(document.getElementById('annualChart'), {
-      type: 'line',
+      type: 'bar',
       data: {
         labels,
         datasets: [{
-          label: '年化報酬率 (當年基準) %',
+          label: '年度報酬率 %',
           data,
-          borderColor: '#7c3aed',
-          backgroundColor: 'rgba(124,58,237,0.08)',
-          fill: true, tension: 0.4,
-          pointRadius: 4, pointBackgroundColor: '#fff',
-          pointBorderColor: '#7c3aed', pointBorderWidth: 2
+          backgroundColor: colors,
+          borderColor: colors.map(c => c.replace('0.75', '1')),
+          borderWidth: 1.5,
+          borderRadius: 6,
         }]
       },
       options: {
@@ -2164,17 +2182,23 @@
         plugins: {
           legend: { labels: { font: { family: 'Space Mono', size: 11 }, color: '#64748b', boxWidth: 14 } },
           tooltip: { callbacks: {
-            label: ctx => ` CAGR：${ctx.raw > 0 ? '+' : ''}${ctx.raw}%`,
+            label: ctx => ` ${ctx.raw >= 0 ? '+' : ''}${ctx.raw}%`,
             afterLabel: ctx => {
-              const yr = labels[ctx.dataIndex].slice(0,4);
-              const base = yearBase[yr];
-              return ` 基準：${base.date} ${fmt(base.amount)}`;
+              const info = tooltipInfo[ctx.dataIndex];
+              return [
+                ` 起：${info.first.date}  ${fmt(info.first.amount)}`,
+                ` 迄：${info.last.date}  ${fmt(info.last.amount)}`
+              ];
             }
           }}
         },
         scales: {
-          x: { grid: { display: false }, ticks: { font: { family: 'Space Mono', size: 10 }, color: '#64748b' } },
-          y: { grid: { color: '#dde3ec' }, ticks: { font: { family: 'Space Mono', size: 10 }, color: '#64748b', callback: v => v + '%' } }
+          x: { grid: { display: false }, ticks: { font: { family: 'Space Mono', size: 11 }, color: '#64748b' } },
+          y: {
+            grid: { color: '#dde3ec' },
+            ticks: { font: { family: 'Space Mono', size: 10 }, color: '#64748b', callback: v => v + '%' },
+            afterDataLimits(scale) { scale.max = Math.max(scale.max, 5); scale.min = Math.min(scale.min, -5); }
+          }
         }
       }
     });
