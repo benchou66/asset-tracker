@@ -562,14 +562,45 @@
     .btn-sm { padding: 5px 10px; font-size: 0.65rem; }
   }
 
-  /* Very small (≤ 380px) */
-  @media (max-width: 380px) {
-    .summary-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
-    .card-value { font-size: 1rem; }
-    .chart-wrap { height: 180px; }
+  /* ── Analytics ── */
+  .chart-tab {
+    padding: 7px 16px;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.06em;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    background: var(--surface);
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
   }
+  .chart-tab:hover { border-color: var(--accent); color: var(--accent); }
+  .chart-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 700; }
 
-  /* ── Auth ── */
+  .analytics-panel { width: 100%; }
+
+  /* ── Log ── */
+  .log-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .log-item:last-child { border-bottom: none; }
+  .log-time { color: var(--muted); font-size: 0.65rem; white-space: nowrap; margin-top: 1px; flex-shrink: 0; }
+  .log-icon { font-size: 0.9rem; flex-shrink: 0; }
+  .log-msg { color: var(--text); font-size: 0.72rem; line-height: 1.5; }
+  .log-item.log-add .log-icon { color: var(--green); }
+  .log-item.log-del .log-icon { color: var(--red); }
+
+  @media (max-width: 600px) {
+    #chart-pie > div, #chart-bondstock > div { grid-template-columns: 1fr; }
+    #pieLegend, #bondstockLegend { flex-direction: row; flex-wrap: wrap; gap: 6px; }
+  }
+</style>
   #loginScreen {
     position: fixed; inset: 0; z-index: 9999;
     background: var(--bg);
@@ -875,6 +906,78 @@
     </div>
     </div>
   </div>
+
+  <!-- ── Analytics Section ── -->
+  <div style="margin-top:28px;">
+    <div style="font-family:var(--font-mono);font-size:0.7rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:16px;display:flex;align-items:center;gap:10px;">
+      📈 數據分析
+      <div style="flex:1;height:1px;background:var(--border);"></div>
+    </div>
+
+    <!-- Chart Tabs -->
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:18px;" id="chartTabs">
+      <button class="chart-tab active" onclick="switchChart('monthly')">月報酬率</button>
+      <button class="chart-tab" onclick="switchChart('pie')">個股佔比</button>
+      <button class="chart-tab" onclick="switchChart('bondstock')">股債占比</button>
+      <button class="chart-tab" onclick="switchChart('vsindex')">vs 加權指數</button>
+      <button class="chart-tab" onclick="switchChart('annual')">年化報酬率</button>
+    </div>
+
+    <!-- Chart Panels -->
+    <div class="panel">
+      <div class="panel-body" style="min-height:320px;">
+
+        <!-- Monthly Returns Bar -->
+        <div id="chart-monthly" class="analytics-panel">
+          <div class="chart-wrap" style="height:280px;"><canvas id="monthlyChart"></canvas></div>
+        </div>
+
+        <!-- Pie Chart -->
+        <div id="chart-pie" class="analytics-panel" style="display:none;">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:center;">
+            <div style="position:relative;height:260px;"><canvas id="pieChart"></canvas></div>
+            <div id="pieLegend" style="font-family:var(--font-mono);font-size:0.72rem;display:flex;flex-direction:column;gap:8px;"></div>
+          </div>
+        </div>
+
+        <!-- Bond vs Stock -->
+        <div id="chart-bondstock" class="analytics-panel" style="display:none;">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:center;">
+            <div style="position:relative;height:260px;"><canvas id="bondstockChart"></canvas></div>
+            <div id="bondstockLegend" style="font-family:var(--font-mono);font-size:0.72rem;display:flex;flex-direction:column;gap:10px;"></div>
+          </div>
+        </div>
+
+        <!-- vs Index -->
+        <div id="chart-vsindex" class="analytics-panel" style="display:none;">
+          <div class="chart-wrap" style="height:280px;"><canvas id="vsindexChart"></canvas></div>
+          <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--muted);margin-top:8px;text-align:center;">* 加權指數來自截圖備註中的加權數值</div>
+        </div>
+
+        <!-- Annual Return -->
+        <div id="chart-annual" class="analytics-panel" style="display:none;">
+          <div class="chart-wrap" style="height:280px;"><canvas id="annualChart"></canvas></div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Log Panel ── -->
+  <div style="margin-top:28px;margin-bottom:40px;">
+    <div style="font-family:var(--font-mono);font-size:0.7rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:16px;display:flex;align-items:center;gap:10px;">
+      📋 操作日誌
+      <div style="flex:1;height:1px;background:var(--border);"></div>
+      <button class="btn-sm" onclick="clearLog()" style="font-size:0.6rem;">清除日誌</button>
+    </div>
+    <div class="panel">
+      <div class="panel-body" style="padding:0;">
+        <div id="logList" style="max-height:240px;overflow-y:auto;font-family:var(--font-mono);font-size:0.72rem;">
+          <div class="empty" style="padding:24px;">尚無操作記錄</div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div> <!-- /wrapper -->
 
 <div class="toast" id="toast"></div>
@@ -936,6 +1039,7 @@
       const h = await window._fbGet('holdings');
       holdings = h || INIT_HOLDINGS;
     } catch { holdings = INIT_HOLDINGS; }
+    await dbLoadLogs();
   }
   function save() { dbSaveEntries(); }
 
@@ -967,6 +1071,9 @@
         await dbLoadAll();
         render();
         renderHoldings();
+        renderLog();
+        renderAnalytics();
+        addLog('login', `登入：${user.email}`);
         showToast(`✓ 歡迎回來 ${user.displayName || ''}`);
       } else if (user) {
         // Wrong account
@@ -1127,7 +1234,7 @@
     const exists = entries.find(e => e.date === date);
     if (exists) { exists.amount = amount; exists.note = note; }
     else { entries.push({ date, amount, note }); entries.sort((a,b) => a.date.localeCompare(b.date)); }
-    save();
+    dbSaveEntries();
 
     // save holdings if stocks were parsed
     if (ocrPending.stocks?.length) {
@@ -1138,6 +1245,8 @@
     // 3. 全面重新渲染：走勢圖 + 四張卡片 + 歷史記錄 + 個股明細
     render();        // → renderSummary (卡片) + renderChart (走勢圖) + renderHistory
     renderHoldings(); // → 個股庫存明細
+    renderAnalytics(); // → 分析圖表
+    addLog('add', `截圖匯入：${date} ${fmt(amount)}${ocrPending.stocks?.length ? ` · ${ocrPending.stocks.length} 檔個股` : ''}`);
 
     // 4. 閃爍四張卡片提示已更新
     ['totalValue','peakValue','drawdownValue','underwaterBadge'].forEach(id => {
@@ -1163,26 +1272,29 @@
     showToast('✓ 已更新：資產走勢、個股明細、四張統計卡片');
   }
 
-  // ─── Add entry ───
+  // ─── Entry CRUD ───
   function deleteEntry(idx) {
+    if (!confirm('確定要刪除這筆記錄？')) return;
+    const e = entries[idx];
+    addLog('del', `刪除記錄：${e.date} ${fmt(e.amount)} ${e.note || ''}`);
     entries.splice(idx, 1);
-    save();
+    dbSaveEntries();
     render();
+    renderAnalytics();
+    showToast('✓ 已刪除');
   }
 
-  function save() { localStorage.setItem('asset_entries_zhou', JSON.stringify(entries)); }
-
   function clearAll() {
-    if (!confirm('確定要清除所有資料？')) return;
+    if (!confirm('確定要清除所有資料？此動作無法復原。')) return;
     entries = [];
-    save();
+    dbSaveEntries();
     render();
     showToast('已清除所有資料');
   }
 
   function loadSample() {
-    entries = REAL_DATA.slice(0, -1);
-    save();
+    entries = REAL_DATA.slice();
+    dbSaveEntries();
     render();
     showToast('✓ 已還原截圖資料');
   }
@@ -1573,7 +1685,7 @@
         if (!exists) {
           entries.push({ date: parsed.date, amount: parsed.total_asset, note: '截圖匯入' });
           entries.sort((a,b)=>a.date.localeCompare(b.date));
-          save();
+          dbSaveEntries();
           render();
         }
       }
@@ -1585,6 +1697,278 @@
       document.getElementById('holdingsTable').style.opacity = '1';
       renderHoldings();
     }
+  }
+
+  // ─── Log System ───
+  let logs = [];
+  const LOG_KEY = 'asset_logs_zhou';
+
+  async function dbSaveLogs() {
+    try { await window._fbSet('logs', logs.slice(-200)); } // keep last 200
+    catch(e) { console.warn('FB save logs:', e); }
+  }
+  async function dbLoadLogs() {
+    try {
+      const l = await window._fbGet('logs');
+      logs = l ? (Array.isArray(l) ? l : Object.values(l)) : [];
+    } catch { logs = []; }
+  }
+
+  function addLog(type, msg) {
+    // type: 'add' | 'del' | 'login' | 'logout'
+    const entry = {
+      time: new Date().toISOString(),
+      type,
+      msg
+    };
+    logs.unshift(entry);
+    dbSaveLogs();
+    renderLog();
+  }
+
+  function renderLog() {
+    const el = document.getElementById('logList');
+    if (!logs.length) {
+      el.innerHTML = '<div class="empty" style="padding:24px;">尚無操作記錄</div>';
+      return;
+    }
+    el.innerHTML = logs.slice(0, 100).map(l => {
+      const d = new Date(l.time);
+      const timeStr = d.toLocaleDateString('zh-TW', {month:'2-digit',day:'2-digit'})
+        + ' ' + d.toLocaleTimeString('zh-TW', {hour:'2-digit',minute:'2-digit'});
+      const icon = l.type === 'add' ? '➕' : l.type === 'del' ? '🗑' : l.type === 'login' ? '🔑' : '👋';
+      const cls  = l.type === 'add' ? 'log-add' : l.type === 'del' ? 'log-del' : '';
+      return `<div class="log-item ${cls}">
+        <span class="log-time">${timeStr}</span>
+        <span class="log-icon">${icon}</span>
+        <span class="log-msg">${l.msg}</span>
+      </div>`;
+    }).join('');
+  }
+
+  function clearLog() {
+    if (!confirm('確定要清除所有日誌？')) return;
+    logs = [];
+    dbSaveLogs();
+    renderLog();
+    showToast('日誌已清除');
+  }
+
+  // ─── Analytics Charts ───
+  let activeChart = 'monthly';
+  let chartInstances = {};
+
+  function switchChart(name) {
+    activeChart = name;
+    document.querySelectorAll('.chart-tab').forEach(t => t.classList.remove('active'));
+    event.target.classList.add('active');
+    document.querySelectorAll('.analytics-panel').forEach(p => p.style.display = 'none');
+    document.getElementById('chart-' + name).style.display = 'block';
+    // destroy old instance to prevent resize issues
+    if (chartInstances[name]) { chartInstances[name].destroy(); delete chartInstances[name]; }
+    renderAnalyticsChart(name);
+  }
+
+  function renderAnalyticsChart(name) {
+    switch(name) {
+      case 'monthly':    renderMonthlyChart(); break;
+      case 'pie':        renderPieChart(); break;
+      case 'bondstock':  renderBondStockChart(); break;
+      case 'vsindex':    renderVsIndexChart(); break;
+      case 'annual':     renderAnnualChart(); break;
+    }
+  }
+
+  // 1. 月報酬率長條圖
+  function renderMonthlyChart() {
+    if (entries.length < 2) return;
+    const sorted = [...entries].sort((a,b) => a.date.localeCompare(b.date));
+    const labels = [], data = [];
+    for (let i = 1; i < sorted.length; i++) {
+      const pct = ((sorted[i].amount - sorted[i-1].amount) / sorted[i-1].amount * 100);
+      labels.push(sorted[i].date.slice(0,7));
+      data.push(parseFloat(pct.toFixed(2)));
+    }
+    const colors = data.map(v => v >= 0 ? 'rgba(5,150,105,0.75)' : 'rgba(220,38,38,0.75)');
+    const borderColors = data.map(v => v >= 0 ? '#059669' : '#dc2626');
+    chartInstances.monthly = new Chart(document.getElementById('monthlyChart'), {
+      type: 'bar',
+      data: { labels, datasets: [{ label: '月報酬率 %', data, backgroundColor: colors, borderColor: borderColors, borderWidth: 1.5, borderRadius: 4 }] },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` ${ctx.raw > 0 ? '+' : ''}${ctx.raw}%` } } },
+        scales: {
+          x: { grid: { display: false }, ticks: { font: { family: 'Space Mono', size: 10 }, color: '#64748b' } },
+          y: { grid: { color: '#dde3ec' }, ticks: { font: { family: 'Space Mono', size: 10 }, color: '#64748b', callback: v => v + '%' },
+               afterDataLimits: ax => { const m = Math.max(Math.abs(ax.min), Math.abs(ax.max)) * 1.1; ax.min = -m; ax.max = m; } }
+        }
+      }
+    });
+  }
+
+  // 2. 個股佔比圓餅圖
+  function renderPieChart() {
+    if (!holdings?.stocks?.length) return;
+    const stocks = [...holdings.stocks].sort((a,b) => b.value - a.value);
+    const total = stocks.reduce((s,r) => s + r.value, 0);
+    const palette = ['#2563eb','#7c3aed','#059669','#d97706','#dc2626','#0891b2','#7c3aed','#16a34a','#ea580c'];
+    const labels = stocks.map(s => s.name);
+    const data   = stocks.map(s => s.value);
+    const colors = stocks.map((_,i) => palette[i % palette.length]);
+
+    chartInstances.pie = new Chart(document.getElementById('pieChart'), {
+      type: 'doughnut',
+      data: { labels, datasets: [{ data, backgroundColor: colors, borderColor: '#fff', borderWidth: 3, hoverOffset: 8 }] },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        cutout: '62%',
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: ctx => ` ${ctx.label}：${(ctx.raw/10000).toFixed(1)}萬 (${(ctx.raw/total*100).toFixed(1)}%)` } }
+        }
+      }
+    });
+
+    document.getElementById('pieLegend').innerHTML = stocks.map((s,i) =>
+      `<div style="display:flex;align-items:center;gap:8px;">
+        <div style="width:10px;height:10px;border-radius:2px;background:${colors[i]};flex-shrink:0;"></div>
+        <span style="color:var(--muted);flex:1;">${s.name}</span>
+        <span style="color:var(--text);font-weight:700;">${(s.value/total*100).toFixed(1)}%</span>
+      </div>`
+    ).join('');
+  }
+
+  // 3. 股債占比圓餅圖
+  // 判斷債券：代碼含 B 或名稱含 債/Bond
+  function renderBondStockChart() {
+    if (!holdings?.stocks?.length) return;
+    let bondVal = 0, stockVal = 0;
+    holdings.stocks.forEach(s => {
+      const isBond = /B$/i.test(s.code) || /債|bond/i.test(s.name);
+      if (isBond) bondVal += s.value; else stockVal += s.value;
+    });
+    const total = bondVal + stockVal;
+    const bPct = (bondVal/total*100).toFixed(1);
+    const sPct = (stockVal/total*100).toFixed(1);
+
+    chartInstances.bondstock = new Chart(document.getElementById('bondstockChart'), {
+      type: 'doughnut',
+      data: {
+        labels: ['股票型 ETF', '債券型 ETF'],
+        datasets: [{ data: [stockVal, bondVal], backgroundColor: ['#2563eb','#d97706'], borderColor:'#fff', borderWidth:3, hoverOffset:8 }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, cutout: '60%',
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` ${ctx.label}：${(ctx.raw/10000).toFixed(1)}萬 (${(ctx.raw/total*100).toFixed(1)}%)` } } }
+      }
+    });
+
+    document.getElementById('bondstockLegend').innerHTML = `
+      <div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+          <div style="width:12px;height:12px;border-radius:2px;background:#2563eb;"></div>
+          <span style="color:var(--muted);">股票型 ETF</span>
+        </div>
+        <div style="font-size:1.2rem;font-weight:700;color:#2563eb;">${sPct}%</div>
+        <div style="color:var(--muted);font-size:0.68rem;margin-top:2px;">${(stockVal/10000).toFixed(1)}萬</div>
+      </div>
+      <div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+          <div style="width:12px;height:12px;border-radius:2px;background:#d97706;"></div>
+          <span style="color:var(--muted);">債券型 ETF</span>
+        </div>
+        <div style="font-size:1.2rem;font-weight:700;color:#d97706;">${bPct}%</div>
+        <div style="color:var(--muted);font-size:0.68rem;margin-top:2px;">${(bondVal/10000).toFixed(1)}萬</div>
+      </div>
+      <div style="border-top:1px solid var(--border);padding-top:8px;">
+        <div style="color:var(--muted);font-size:0.65rem;">總計</div>
+        <div style="font-weight:700;color:var(--text);">${(total/10000).toFixed(1)}萬</div>
+      </div>`;
+  }
+
+  // 4. 資產 vs 加權指數對比
+  function renderVsIndexChart() {
+    if (entries.length < 2) return;
+    const sorted = [...entries].sort((a,b) => a.date.localeCompare(b.date));
+    // extract index from note: "加權NNNNN"
+    const withIndex = sorted.filter(e => /加權(\d+)/.test(e.note || ''));
+    if (withIndex.length < 2) {
+      document.getElementById('chart-vsindex').innerHTML =
+        '<div class="empty">備註中無加權指數資料（格式：加權NNNNN）</div>';
+      return;
+    }
+    const base = withIndex[0];
+    const baseAsset = base.amount;
+    const baseIndex = parseInt(base.note.match(/加權(\d+)/)[1]);
+    const labels = withIndex.map(e => e.date.slice(0,7));
+    const assetData  = withIndex.map(e => parseFloat(((e.amount - baseAsset)/baseAsset*100).toFixed(2)));
+    const indexData  = withIndex.map(e => {
+      const idx = parseInt(e.note.match(/加權(\d+)/)[1]);
+      return parseFloat(((idx - baseIndex)/baseIndex*100).toFixed(2));
+    });
+
+    chartInstances.vsindex = new Chart(document.getElementById('vsindexChart'), {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [
+          { label: '資產報酬率 %', data: assetData, borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,0.08)', fill: true, tension: 0.3, pointRadius: 4, pointBackgroundColor: '#fff', pointBorderColor: '#2563eb', pointBorderWidth: 2 },
+          { label: '加權指數漲跌 %', data: indexData, borderColor: '#d97706', backgroundColor: 'rgba(217,119,6,0.06)', fill: true, tension: 0.3, pointRadius: 4, pointBackgroundColor: '#fff', pointBorderColor: '#d97706', pointBorderWidth: 2, borderDash: [5,3] }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { labels: { font: { family: 'Space Mono', size: 11 }, color: '#64748b', boxWidth: 14 } }, tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}：${ctx.raw > 0 ? '+' : ''}${ctx.raw}%` } } },
+        scales: {
+          x: { grid: { display: false }, ticks: { font: { family: 'Space Mono', size: 10 }, color: '#64748b' } },
+          y: { grid: { color: '#dde3ec' }, ticks: { font: { family: 'Space Mono', size: 10 }, color: '#64748b', callback: v => v + '%' } }
+        }
+      }
+    });
+  }
+
+  // 5. 年化報酬率趨勢
+  function renderAnnualChart() {
+    if (entries.length < 2) return;
+    const sorted = [...entries].sort((a,b) => a.date.localeCompare(b.date));
+    const first = sorted[0];
+    const labels = [], data = [];
+    sorted.slice(1).forEach(e => {
+      const years = (new Date(e.date) - new Date(first.date)) / (365.25 * 86400000);
+      if (years < 0.08) return; // skip < 1 month
+      const cagr = (Math.pow(e.amount / first.amount, 1 / years) - 1) * 100;
+      labels.push(e.date.slice(0,7));
+      data.push(parseFloat(cagr.toFixed(2)));
+    });
+
+    chartInstances.annual = new Chart(document.getElementById('annualChart'), {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          label: '年化報酬率 (CAGR) %',
+          data,
+          borderColor: '#7c3aed',
+          backgroundColor: 'rgba(124,58,237,0.08)',
+          fill: true, tension: 0.4,
+          pointRadius: 4, pointBackgroundColor: '#fff', pointBorderColor: '#7c3aed', pointBorderWidth: 2
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { labels: { font: { family: 'Space Mono', size: 11 }, color: '#64748b', boxWidth: 14 } }, tooltip: { callbacks: { label: ctx => ` CAGR：${ctx.raw > 0 ? '+' : ''}${ctx.raw}%` } } },
+        scales: {
+          x: { grid: { display: false }, ticks: { font: { family: 'Space Mono', size: 10 }, color: '#64748b' } },
+          y: { grid: { color: '#dde3ec' }, ticks: { font: { family: 'Space Mono', size: 10 }, color: '#64748b', callback: v => v + '%' } }
+        }
+      }
+    });
+  }
+
+  // render default chart when data loads
+  function renderAnalytics() {
+    if (chartInstances[activeChart]) { chartInstances[activeChart].destroy(); delete chartInstances[activeChart]; }
+    renderAnalyticsChart(activeChart);
   }
 
   // Init handled by boot() above
