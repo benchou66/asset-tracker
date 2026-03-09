@@ -822,45 +822,37 @@
       </div>
     </div>
 
-    <!-- Right panel: upload only -->
+    <!-- Right panel: text paste -->
     <div style="display:flex; flex-direction:column; gap:20px;">
-      <!-- Screenshot OCR upload -->
+      <!-- Text paste OCR -->
       <div class="panel">
         <div class="panel-header">
-          <div class="panel-title">📷 上傳截圖自動讀取</div>
+          <div class="panel-title">📋 貼上文字自動讀取</div>
         </div>
         <div class="panel-body">
 
-          <!-- Two upload slots -->
-          <div class="upload-slots-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
-            <!-- Slot 1 -->
-            <div>
-              <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;">第1張｜總覽頁</div>
-              <div class="upload-slot" id="slot1" onclick="document.getElementById('file1').click()">
-                <div class="slot-icon">📊</div>
-                <div class="slot-text">點擊選取</div>
-                <img class="slot-preview" id="preview1" alt="">
-              </div>
-              <div id="filename1" style="margin-top:5px;font-family:var(--font-mono);font-size:0.62rem;color:var(--accent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:none;"></div>
-              <input type="file" id="file1" accept="image/*" style="display:none" onchange="slotChanged(1,event)">
-            </div>
-            <!-- Slot 2 -->
-            <div>
-              <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;">第2張｜明細頁</div>
-              <div class="upload-slot" id="slot2" onclick="document.getElementById('file2').click()">
-                <div class="slot-icon">📋</div>
-                <div class="slot-text">點擊選取</div>
-                <img class="slot-preview" id="preview2" alt="">
-              </div>
-              <div id="filename2" style="margin-top:5px;font-family:var(--font-mono);font-size:0.62rem;color:var(--accent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:none;"></div>
-              <input type="file" id="file2" accept="image/*" style="display:none" onchange="slotChanged(2,event)">
-            </div>
+          <div style="font-family:var(--font-mono);font-size:0.68rem;color:var(--muted);margin-bottom:8px;line-height:1.6;">
+            從券商 App 複製資產資訊後貼入，AI 自動解析總資產、個股明細。
           </div>
 
-          <!-- Analyse button -->
-          <button class="btn" id="analyseBtn" onclick="runDualOCR()" disabled style="opacity:0.45;">
-            🔍 分析兩張截圖
-          </button>
+          <textarea id="pasteInput"
+            placeholder="在此貼上從券商 App 複製的文字...&#10;&#10;包含總資產、報酬率、個股明細等資訊即可，格式不限。"
+            style="width:100%;min-height:180px;padding:12px;border:1.5px solid var(--border);border-radius:10px;font-family:var(--font-mono);font-size:0.78rem;color:var(--text);background:var(--surface2);box-sizing:border-box;resize:vertical;outline:none;line-height:1.6;transition:border-color 0.2s;"
+            oninput="updatePasteBtn()"
+            onfocus="this.style.borderColor='var(--accent)'"
+            onblur="this.style.borderColor='var(--border)'"></textarea>
+
+          <div style="display:flex;gap:8px;margin-top:10px;">
+            <button class="btn" id="analyseBtn" onclick="runTextOCR()" disabled style="opacity:0.45;flex:1;">
+              🔍 AI 解析
+            </button>
+            <button onclick="document.getElementById('pasteInput').value='';updatePasteBtn();"
+              style="padding:10px 16px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;font-family:var(--font-mono);font-size:0.78rem;color:var(--muted);cursor:pointer;transition:all 0.2s;"
+              onmouseover="this.style.borderColor='var(--red)';this.style.color='var(--red)'"
+              onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">
+              清除
+            </button>
+          </div>
 
           <!-- Loading -->
           <div id="ocrLoading" style="display:none;text-align:center;padding:20px;font-family:var(--font-mono);font-size:0.78rem;color:var(--accent);">
@@ -915,8 +907,7 @@
       <div class="panel-title">📊 個股庫存明細</div>
       <div style="display:flex;gap:8px;align-items:center;">
         <div style="font-family:var(--font-mono);font-size:0.68rem;color:var(--muted);" id="holdingsDate"></div>
-        <button class="btn-sm" onclick="document.getElementById('holdingsFileInput').click()">📷 更新截圖</button>
-        <input type="file" id="holdingsFileInput" accept="image/*" style="display:none" onchange="handleHoldingsScreenshot(event)">
+
       </div>
     </div>
     <div class="panel-body" id="holdingsBody">
@@ -1195,113 +1186,45 @@
     if (e.target === this) closeApiKeyModal();
   });
   let ocrPending = null;
-  let slotData = { 1: null, 2: null }; // base64 dataURLs
 
-  // 壓縮圖片至最大 1200px、品質 0.82，減少 API payload
-  function compressImage(dataUrl, maxPx = 1200, quality = 0.82) {
-    return new Promise(resolve => {
-      const img = new Image();
-      img.onload = () => {
-        const scale = Math.min(1, maxPx / Math.max(img.width, img.height));
-        const w = Math.round(img.width * scale);
-        const h = Math.round(img.height * scale);
-        const canvas = document.createElement('canvas');
-        canvas.width = w; canvas.height = h;
-        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-        resolve(canvas.toDataURL('image/jpeg', quality));
-      };
-      img.src = dataUrl;
-    });
-  }
-
-  function slotChanged(n, e) {
-    const file = e.target.files[0];
-    e.target.value = '';
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = async ev => {
-      // 壓縮後再存
-      const compressed = await compressImage(ev.target.result);
-      slotData[n] = compressed;
-      const slot = document.getElementById('slot' + n);
-      const preview = document.getElementById('preview' + n);
-      const fnLabel = document.getElementById('filename' + n);
-      preview.src = compressed;
-      slot.classList.add('has-file');
-      fnLabel.textContent = '📄 ' + file.name;
-      fnLabel.style.display = 'block';
-      if (!slot.querySelector('.slot-check')) {
-        const ck = document.createElement('div');
-        ck.className = 'slot-check';
-        ck.textContent = '✓';
-        slot.appendChild(ck);
-      }
-      updateAnalyseBtn();
-    };
-    reader.readAsDataURL(file);
-  }
-
-  function updateAnalyseBtn() {
+  // ─── Text Paste OCR ───
+  function updatePasteBtn() {
+    const val = document.getElementById('pasteInput').value.trim();
     const btn = document.getElementById('analyseBtn');
-    const ready = slotData[1] || slotData[2]; // at least 1 image
-    btn.disabled = !ready;
-    btn.style.opacity = ready ? '1' : '0.45';
-    if (slotData[1] && slotData[2]) btn.textContent = '🔍 分析兩張截圖';
-    else if (slotData[1] || slotData[2]) btn.textContent = '🔍 分析截圖（1張）';
+    btn.disabled = !val;
+    btn.style.opacity = val ? '1' : '0.45';
   }
 
-  async function runDualOCR() {
+  async function runTextOCR() {
+    const pasteText = document.getElementById('pasteInput').value.trim();
+    if (!pasteText) return;
+
+    if (!_apiKey) {
+      openApiKeyModal();
+      document.getElementById('apiKeyStatus').textContent = '⚠ 請先設定 API Key';
+      document.getElementById('apiKeyStatus').style.color = 'var(--red)';
+      return;
+    }
+
     document.getElementById('ocrResult').style.display = 'none';
     document.getElementById('ocrLoading').style.display = 'block';
     document.getElementById('analyseBtn').disabled = true;
 
-    // build image content blocks for all provided images
-    const imageBlocks = [];
-    for (const n of [1, 2]) {
-      if (!slotData[n]) continue;
-      imageBlocks.push({
-        type: 'image',
-        source: {
-          type: 'base64',
-          media_type: slotData[n].split(';')[0].split(':')[1],
-          data: slotData[n].split(',')[1]
-        }
-      });
-    }
+    const prompt = `以下是從台股券商 App 複製的文字資料，請解析並回傳純 JSON（不含任何其他文字或 markdown）：
 
-    const imgCount = imageBlocks.length;
-    const prompt = imgCount === 2
-      ? `我提供了兩張台股券商 App 的庫存截圖（同一天，第一張是頁面上方，第二張是捲動後的下方）。請合併讀取兩張圖的所有資訊，回傳純 JSON（不含其他文字）：
+${pasteText}
+
+請回傳以下格式：
 {
-  "total_asset": 數字（NTD 總資產，從第一張圖讀取，純數字無逗號），
-  "return_rate": "報酬率字串，例如 '16.57%'",
-  "date": "更新日期 YYYY-MM-DD，若有顯示則提取，否則 null",
-  "index": 加權指數數字,
-  "notes": "損益試算等補充資訊",
-  "stocks": [
-    { "code": "股票代碼", "name": "股票名稱", "shares": 庫存股數, "value": 現值數字, "pnl": 損益數字, "pct": 報酬率數字 }
-  ]
-}`
-      : `這是一張台股券商 App 的庫存截圖。請讀取所有可見資訊，回傳純 JSON（不含其他文字）：
-{
-  "total_asset": 數字或 null,
-  "return_rate": "報酬率字串或 null",
-  "date": "日期 YYYY-MM-DD 或 null",
+  "total_asset": 總資產數字（純數字，無逗號，例如 13542133），
+  "return_rate": "報酬率字串，例如 '16.57%'，若無則 null",
+  "date": "日期 YYYY-MM-DD，若無法判斷則用今天 ${new Date().toISOString().slice(0,10)}",
   "index": 加權指數數字或 null,
-  "notes": "補充資訊",
+  "notes": "補充備註",
   "stocks": [
-    { "code": "代碼", "name": "名稱", "shares": 股數, "value": 現值, "pnl": 損益, "pct": 報酬率數字 }
+    { "code": "股票代碼", "name": "股票名稱", "shares": 庫存股數數字, "value": 現值數字, "pnl": 損益數字（可負）, "pct": 報酬率數字（例如 20.24）}
   ]
 }`;
-
-    if (!_apiKey) {
-      openApiKeyModal();
-      document.getElementById('apiKeyStatus').textContent = '⚠ 請先設定 API Key 才能使用 OCR 功能';
-      document.getElementById('apiKeyStatus').style.color = 'var(--red)';
-      document.getElementById('ocrLoading').style.display = 'none';
-      document.getElementById('analyseBtn').disabled = false;
-      return;
-    }
 
     try {
       const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -1314,17 +1237,14 @@
         },
         body: JSON.stringify({
           model: 'claude-sonnet-4-20250514',
-          max_tokens: 1200,
-          messages: [{
-            role: 'user',
-            content: [...imageBlocks, { type: 'text', text: prompt }]
-          }]
+          max_tokens: 1500,
+          messages: [{ role: 'user', content: prompt }]
         })
       });
 
       if (!res.ok) {
         const errBody = await res.text();
-        throw new Error(`API 錯誤 ${res.status}: ${errBody.slice(0, 120)}`);
+        throw new Error(`API 錯誤 ${res.status}: ${errBody.slice(0, 200)}`);
       }
 
       const data = await res.json();
@@ -1338,13 +1258,12 @@
       document.getElementById('ocrLoading').style.display = 'none';
       document.getElementById('ocrResult').style.display = 'block';
       document.getElementById('ocrAmount').textContent = parsed.total_asset
-        ? 'NT$ ' + Number(parsed.total_asset).toLocaleString('zh-TW') : '未讀取到';
+        ? 'NT$ ' + Number(parsed.total_asset).toLocaleString('zh-TW') : '⚠ 未讀取到';
       document.getElementById('ocrDate').textContent = parsed.date || '⚠ 未偵測到日期';
       document.getElementById('ocrReturn').textContent =
         (parsed.return_rate || '—') + (parsed.stocks?.length ? `　${parsed.stocks.length} 檔個股` : '');
       document.getElementById('ocrNote').textContent = parsed.notes || '';
 
-      // also immediately update holdings table preview
       if (parsed.stocks?.length) {
         holdings = { date: parsed.date, stocks: parsed.stocks };
         renderHoldings();
@@ -1353,7 +1272,7 @@
     } catch (err) {
       document.getElementById('ocrLoading').style.display = 'none';
       document.getElementById('ocrResult').style.display = 'block';
-      document.getElementById('ocrAmount').textContent = '❌ 讀取失敗';
+      document.getElementById('ocrAmount').textContent = '❌ 解析失敗';
       document.getElementById('ocrDate').textContent = err.message;
       document.getElementById('ocrReturn').textContent = '';
       document.getElementById('ocrNote').textContent = '';
@@ -1366,47 +1285,36 @@
     if (!ocrPending) return;
     const amount = ocrPending.total_asset;
     const date = ocrPending.date;
-    const note = ocrPending.notes || '截圖匯入';
-    if (!amount || !date) { showToast('⚠ 未偵測到日期，無法加入'); return; }
+    const note = ocrPending.notes || '文字匯入';
+    if (!amount || !date) { showToast('⚠ 未偵測到日期或金額，無法加入'); return; }
 
-    // 1. 更新 entries
     const exists = entries.find(e => e.date === date);
     if (exists) { exists.amount = amount; exists.note = note; }
     else { entries.push({ date, amount, note }); entries.sort((a,b) => a.date.localeCompare(b.date)); }
     dbSaveEntries();
 
-    // save holdings if stocks were parsed
     if (ocrPending.stocks?.length) {
       holdings = { date, stocks: ocrPending.stocks };
       dbSaveHoldings();
     }
 
-    // 3. 全面重新渲染：走勢圖 + 四張卡片 + 歷史記錄 + 個股明細
-    render();        // → renderSummary (卡片) + renderChart (走勢圖) + renderHistory
-    renderHoldings(); // → 個股庫存明細
-    renderAnalytics(); // → 分析圖表
-    addLog('add', `截圖匯入：${date} ${fmt(amount)}${ocrPending.stocks?.length ? ` · ${ocrPending.stocks.length} 檔個股` : ''}`);
+    render();
+    renderHoldings();
+    renderAnalytics();
+    addLog('add', `文字匯入：${date} ${fmt(amount)}${ocrPending.stocks?.length ? ` · ${ocrPending.stocks.length} 檔個股` : ''}`);
 
-    // 4. 閃爍四張卡片提示已更新
     ['totalValue','peakValue','drawdownValue','underwaterBadge'].forEach(id => {
       const card = document.getElementById(id)?.closest('.card');
       if (!card) return;
       card.classList.remove('flash');
-      void card.offsetWidth; // reflow to restart animation
+      void card.offsetWidth;
       card.classList.add('flash');
       card.addEventListener('animationend', () => card.classList.remove('flash'), { once: true });
     });
 
-    // 5. 收起 UI、重置 slots
     document.getElementById('ocrResult').style.display = 'none';
-    slotData = { 1: null, 2: null };
-    [1,2].forEach(n => {
-      document.getElementById('slot'+n).classList.remove('has-file');
-      document.getElementById('preview'+n).src = '';
-      const fn = document.getElementById('filename'+n);
-      fn.textContent = ''; fn.style.display = 'none';
-    });
-    updateAnalyseBtn();
+    document.getElementById('pasteInput').value = '';
+    updatePasteBtn();
     ocrPending = null;
     showToast('✓ 已更新：資產走勢、個股明細、四張統計卡片');
   }
