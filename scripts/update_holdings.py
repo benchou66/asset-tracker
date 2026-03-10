@@ -21,9 +21,6 @@ SERVICE_ACCOUNT_JSON  = os.environ["FIREBASE_SERVICE_ACCOUNT"]
 TW_TZ   = timezone(timedelta(hours=8))
 TODAY   = datetime.now(TW_TZ).strftime("%Y-%m-%d")
 
-# 賣出成本費率：手續費 0.1425% + 證交稅(ETF) 0.1% = 0.2425%
-FEE_RATE = 0.001425 + 0.001
-
 # ── 初始化 Firebase ────────────────────────────────────
 cred = credentials.Certificate(json.loads(SERVICE_ACCOUNT_JSON))
 firebase_admin.initialize_app(cred, {"databaseURL": FIREBASE_DATABASE_URL})
@@ -46,9 +43,7 @@ def get_twse_close_price(stock_code: str) -> float | None:
         if data.get("stat") != "OK" or not data.get("data"):
             print(f"  ⚠️  {stock_code}: 無資料 (可能今日未開市或代號錯誤)")
             return None
-        # data[-1] 是當月最後一筆（今日）
         last_row = data["data"][-1]
-        # 欄位: 日期, 成交股數, 成交金額, 開盤, 最高, 最低, 收盤, 漲跌, 成交筆數
         close_str = last_row[6].replace(",", "")
         return float(close_str)
     except Exception as e:
@@ -59,7 +54,7 @@ def get_twse_close_price(stock_code: str) -> float | None:
 def get_otc_close_price(stock_code: str) -> float | None:
     """上櫃一般股票 openapi"""
     url = "https://www.tpex.org.tw/openapi/v1/tpex_mainboard_daily_close_quotes"
-    params = {"date": TODAY.replace("-", "/")[2:]}  # YY/MM/DD
+    params = {"date": TODAY.replace("-", "/")[2:]}
     try:
         resp = requests.get(url, params=params, timeout=10)
         rows = resp.json()
@@ -104,9 +99,7 @@ def fetch_close_price(stock_code: str) -> float | None:
 def main():
     print(f"📅 {TODAY} 開始更新個股現值...")
 
-    # ── 讀取 Firebase 現有 holdings ──────────────────────
-    ref_path = f"holdings"
-    holdings_ref = db.reference(ref_path)
+    holdings_ref = db.reference("holdings")
     holdings = holdings_ref.get()
 
     if not holdings or not holdings.get("stocks"):
@@ -128,7 +121,7 @@ def main():
             continue
 
         print(f"  📈 {code} {name} ({shares:,.0f} 股)...")
-        time.sleep(0.5)  # 避免打太快被擋
+        time.sleep(0.5)
 
         price = fetch_close_price(code)
         if price is None:
@@ -138,14 +131,18 @@ def main():
 
         gross_value = price * shares
         # 賣出時須扣：手續費 0.1425% + 證交稅(ETF) 0.1%
-        fee   = round(gross_value * FEE_RATE)
+        fee   = round(gross_value * (0.001425 + 0.001))
         value = round(gross_value - fee)
 
-        pnl   = round(value - cost) if cost else None
-        pct   = round((value - cost) / cost * 100, 2) if cost else None
-
-        pnl_str = f"+{pnl:,}" if pnl and pnl >= 0 else f"{pnl:,}" if pnl else ""
-        pct_str = f"+{pct}%" if pct and pct >= 0 else f"{pct}%" if pct else ""
+        if cost:
+            pnl     = round(value - cost)
+            pct_val = round((value - cost) / cost * 100, 2)
+            pnl_str = f"+{pnl:,}" if pnl >= 0 else f"{pnl:,}"
+            pct_str = f"+{pct_val}%" if pct_val >= 0 else f"{pct_val}%"
+        else:
+            # cost 未填，保留 Firebase 原有的 pnl/pct 不覆蓋
+            pnl_str = stock.get("pnl", "")
+            pct_str = stock.get("pct", "")
 
         print(f"     收盤價 {price:,.2f} → 現值 {value:,} (扣費 {fee:,}) | 損益 {pnl_str} ({pct_str})")
 
@@ -156,7 +153,6 @@ def main():
             "pct":   pct_str,
         })
 
-    # ── 寫回 Firebase ──────────────────────────────────
     holdings_ref.update({
         "stocks": updated,
         "date":   TODAY,
