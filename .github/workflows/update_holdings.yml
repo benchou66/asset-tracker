@@ -26,5 +26,29 @@ jobs:
         env:
           FIREBASE_DATABASE_URL: ${{ secrets.FIREBASE_DATABASE_URL }}
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-          FIREBASE_USER_UID: ${{ secrets.FIREBASE_USER_UID }}
         run: python scripts/update_holdings.py
+
+  notify-failure:
+    runs-on: ubuntu-latest
+    needs: update
+    if: failure()
+
+    steps:
+      - name: Send failure email
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.NOTIFY_EMAIL }}
+          password: ${{ secrets.NOTIFY_EMAIL_PASSWORD }}
+          subject: "❌ Asset Tracker 每日更新失敗 - ${{ github.run_id }}"
+          to: ${{ secrets.NOTIFY_EMAIL }}
+          from: ${{ secrets.NOTIFY_EMAIL }}
+          body: |
+            Asset Tracker 每日股價更新腳本執行失敗！
+
+            時間：${{ github.event.repository.updated_at }}
+            執行 ID：${{ github.run_id }}
+
+            請至 GitHub Actions 查看詳細錯誤：
+            https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
