@@ -1,0 +1,30 @@
+name: 每日個股現值更新
+
+on:
+  schedule:
+    # 每天 15:30 台灣時間 (UTC+8) = UTC 07:30
+    - cron: '30 7 * * 1-5'  # 週一到週五
+  workflow_dispatch:  # 允許手動觸發
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install requests firebase-admin
+
+      - name: Run update script
+        env:
+          FIREBASE_DATABASE_URL: ${{ secrets.FIREBASE_DATABASE_URL }}
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          FIREBASE_USER_UID: ${{ secrets.FIREBASE_USER_UID }}
+        run: python scripts/update_holdings.py
