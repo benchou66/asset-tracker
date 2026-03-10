@@ -26,5 +26,4 @@ jobs:
         env:
           FIREBASE_DATABASE_URL: ${{ secrets.FIREBASE_DATABASE_URL }}
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-          FIREBASE_USER_UID: ${{ secrets.FIREBASE_USER_UID }}
         run: python scripts/update_holdings.py
