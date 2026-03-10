@@ -1796,7 +1796,7 @@
     // 新: 代號/名稱/股數/現值/成本/損益/報酬率
     // 舊: 代號/名稱/股數/現值/損益/報酬率
     const hasCost = parts.length >= 7;
-    return {
+    const obj = {
       code:   parts[0].trim(),
       name:   parts[1].trim(),
       shares: clean(parts[2]) || 0,
@@ -1805,6 +1805,12 @@
       pnl:    hasCost ? (parts[5] != null ? clean(parts[5]) : 0) : (parts[4] != null ? clean(parts[4]) : 0),
       pct:    hasCost ? (parts[6] != null ? clean(parts[6]) : 0) : (parts[5] != null ? clean(parts[5]) : 0),
     };
+    // 有成本、但損益未填（0）時才自動計算
+    if (obj.cost > 0 && obj.value > 0 && obj.pnl === 0) {
+      obj.pnl = Math.round(obj.value - obj.cost);
+      obj.pct = Math.round((obj.value - obj.cost) / obj.cost * 10000) / 100;
+    }
+    return obj;
   }
 
   function previewImport() {
@@ -1830,7 +1836,19 @@
     const parsed = lines.map(parseImportLine).filter(Boolean);
     if (!parsed.length) { showToast('⚠ 無法解析，請確認格式'); return; }
 
-    holdings.stocks = parsed;
+    // 合併：若匯入的 cost 為 0，保留資料庫原有的 cost
+    const existing = (holdings.stocks || []);
+    holdings.stocks = parsed.map(s => {
+      const prev = existing.find(e => e.code === s.code);
+      const mergedCost = (s.cost && s.cost > 0) ? s.cost : (prev?.cost || 0);
+      const merged = { ...s, cost: mergedCost };
+      // cost 有值但損益是 0 → 重新計算
+      if (mergedCost > 0 && merged.pnl === 0) {
+        merged.pnl = Math.round(merged.value - mergedCost);
+        merged.pct = Math.round((merged.value - mergedCost) / mergedCost * 10000) / 100;
+      }
+      return merged;
+    });
     holdings.date   = new Date().toISOString().slice(0, 10);
     await dbSaveHoldings();
     renderHoldings();
@@ -1890,12 +1908,17 @@
     if (!name) { showToast('⚠ 請輸入股票名稱'); return; }
     if (isNaN(value)) { showToast('⚠ 請輸入現值'); return; }
 
+    // 有成本、但損益未填時才自動計算
+    const hasCostVal = !isNaN(cost) && cost > 0;
+    const pnlFilled  = !isNaN(pnl) && pnl !== 0;
+    const autoPnl = (hasCostVal && !pnlFilled) ? Math.round(value - cost) : (isNaN(pnl) ? 0 : pnl);
+    const autoPct = (hasCostVal && !pnlFilled) ? Math.round((value - cost) / cost * 10000) / 100 : (isNaN(pct) ? 0 : pct);
     const row = {
       code, name, shares,
       value,
-      ...((!isNaN(cost) && cost > 0) ? { cost } : {}),
-      pnl:  isNaN(pnl) ? 0 : pnl,
-      pct:  isNaN(pct) ? 0 : pct
+      ...(hasCostVal ? { cost } : {}),
+      pnl: autoPnl,
+      pct: autoPct
     };
 
     if (!holdings.stocks) holdings.stocks = [];
