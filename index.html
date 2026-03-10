@@ -769,6 +769,20 @@
       <div id="underwaterBadge">—</div>
       <div class="card-sub" id="underwaterMonths" style="line-height:1.5;"></div>
     </div>
+    <div class="card">
+      <div class="card-label">總付出成本</div>
+      <div class="card-value" id="totalCostValue" style="font-size:1.2rem;margin-bottom:10px;">—</div>
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:0.68rem;color:var(--muted);letter-spacing:0.08em;text-transform:uppercase;">預估損益</span>
+          <span id="totalPnlValue" style="font-family:var(--font-mono);font-size:0.82rem;font-weight:700;">—</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:0.68rem;color:var(--muted);letter-spacing:0.08em;text-transform:uppercase;">預估報酬率</span>
+          <span id="totalReturnRate" style="font-family:var(--font-mono);font-size:0.82rem;font-weight:700;">—</span>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- Main grid -->
@@ -1522,6 +1536,9 @@
       document.getElementById('totalReturn').textContent = '—';
       document.getElementById('entryCount').textContent = entries.length;
       document.getElementById('historyRange').textContent = '';
+      document.getElementById('totalCostValue').textContent = '—';
+      document.getElementById('totalPnlValue').textContent = '—';
+      document.getElementById('totalReturnRate').textContent = '—';
       return;
     }
 
@@ -1565,6 +1582,38 @@
       document.getElementById('historyRange').textContent = `${data[0].label} ─ ${data[data.length-1].label}`;
 
     document.getElementById('maxUnderwater').textContent = maxUW > 0 ? (Math.round(maxUW*10)/10) + ' 個月' : '—';
+
+    // ── 成本卡：從最新一筆 entry 取 cost / pnl / returnRate ──
+    const latestEntry = [...entries].sort((a,b) => a.date.localeCompare(b.date)).pop();
+    const eCost   = latestEntry?.cost;
+    const ePnl    = latestEntry?.pnl;
+    const eReturn = latestEntry?.returnRate;
+    const costEl   = document.getElementById('totalCostValue');
+    const pnlEl    = document.getElementById('totalPnlValue');
+    const retEl    = document.getElementById('totalReturnRate');
+
+    if (eCost) {
+      costEl.textContent = 'NT$ ' + Math.round(eCost).toLocaleString('zh-TW');
+      costEl.className = 'card-value';
+    } else {
+      costEl.textContent = '—';
+    }
+    if (ePnl != null && !isNaN(ePnl)) {
+      const pnlPos = ePnl >= 0;
+      pnlEl.textContent = (pnlPos ? '+' : '') + Math.round(ePnl).toLocaleString('zh-TW');
+      pnlEl.style.color = pnlPos ? 'var(--green)' : 'var(--red)';
+    } else {
+      pnlEl.textContent = '—';
+      pnlEl.style.color = '';
+    }
+    if (eReturn != null && !isNaN(eReturn)) {
+      const retPos = eReturn >= 0;
+      retEl.textContent = (retPos ? '+' : '') + eReturn + '%';
+      retEl.style.color = retPos ? 'var(--green)' : 'var(--red)';
+    } else {
+      retEl.textContent = '—';
+      retEl.style.color = '';
+    }
   }
 
   function renderChart(data) {
