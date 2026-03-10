@@ -778,8 +778,8 @@
       <div class="panel-header">
         <div class="panel-title">資產走勢</div>
         <div class="tabs">
-          <button class="tab" onclick="setView('D')">日</button>
-          <button class="tab active" onclick="setView('M')">月</button>
+          <button class="tab active" onclick="setView('D')">日</button>
+          <button class="tab" onclick="setView('M')">月</button>
           <button class="tab" onclick="setView('Y')">年</button>
         </div>
       </div>
@@ -1078,7 +1078,7 @@
 
   let entries = [];
   let holdings = INIT_HOLDINGS;
-  let currentView = 'M';
+  let currentView = 'D';
   let chart = null;
 
   // ─── Firebase Storage helpers ───
