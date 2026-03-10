@@ -77,14 +77,19 @@
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 16px;
-    margin-bottom: 28px;
+    margin-bottom: 16px;
+  }
+  .summary-grid-top {
+    display: grid;
+    grid-template-columns: 1.5fr 1fr 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
   }
   .summary-grid-bottom {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 16px;
     margin-bottom: 28px;
-    margin-top: -12px;
   }
   .card {
     background: var(--surface);
@@ -516,6 +521,7 @@
     .wrapper { padding: 16px 14px; }
     .main-grid { grid-template-columns: 1fr; }
     .summary-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    .summary-grid-top { grid-template-columns: repeat(2, 1fr); gap: 12px; }
     .summary-grid-bottom { grid-template-columns: repeat(3, 1fr); gap: 12px; }
     .card-value { font-size: 1.3rem; }
     .chart-wrap { height: 260px; }
@@ -533,7 +539,8 @@
 
     /* summary cards: 2×2 grid */
     .summary-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 16px; }
-    .summary-grid-bottom { grid-template-columns: repeat(1, 1fr); gap: 10px; margin-bottom: 16px; margin-top: -6px; }
+    .summary-grid-top { grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 12px; }
+    .summary-grid-bottom { grid-template-columns: repeat(1, 1fr); gap: 10px; margin-bottom: 16px; }
     .card { padding: 14px 12px; }
     .card-label { font-size: 0.6rem; margin-bottom: 6px; }
     .card-value { font-size: 1.1rem; }
@@ -756,33 +763,28 @@
     </div>
   </header>
 
-  <!-- Summary cards 上排：總資產 + 總付出成本 -->
-  <div class="summary-grid">
+  <!-- 第一排：目前總資產、目前總損益、目前報酬率、總付出成本 -->
+  <div class="summary-grid-top">
     <div class="card">
       <div class="card-label">目前總資產</div>
       <div class="card-value" id="totalValue">—</div>
       <div class="card-sub" id="totalSub">尚無資料</div>
     </div>
     <div class="card">
+      <div class="card-label">目前總損益</div>
+      <div class="card-value" id="totalPnlValue" style="font-size:1.3rem;">—</div>
+    </div>
+    <div class="card">
+      <div class="card-label">目前報酬率</div>
+      <div class="card-value" id="totalReturnRate" style="font-size:1.3rem;">—</div>
+    </div>
+    <div class="card">
       <div class="card-label">總付出成本</div>
-      <div style="display:flex;flex-direction:column;gap:8px;margin-top:6px;">
-        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;">
-          <span style="font-size:0.68rem;color:var(--muted);letter-spacing:0.08em;white-space:nowrap;">預估損益</span>
-          <span id="totalPnlValue" style="font-family:var(--font-mono);font-size:1.15rem;font-weight:700;letter-spacing:-0.02em;">—</span>
-        </div>
-        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;">
-          <span style="font-size:0.68rem;color:var(--muted);letter-spacing:0.08em;white-space:nowrap;">預估報酬率</span>
-          <span id="totalReturnRate" style="font-family:var(--font-mono);font-size:1.15rem;font-weight:700;letter-spacing:-0.02em;">—</span>
-        </div>
-        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding-top:4px;border-top:1px solid var(--border);">
-          <span style="font-size:0.68rem;color:var(--muted);letter-spacing:0.08em;white-space:nowrap;">總付出成本</span>
-          <span id="totalCostValue" style="font-family:var(--font-mono);font-size:0.78rem;color:var(--muted);">—</span>
-        </div>
-      </div>
+      <div class="card-value" id="totalCostValue" style="font-size:1.3rem;">—</div>
     </div>
   </div>
 
-  <!-- Summary cards 下排：歷史最高 + Drawdown + Underwater -->
+  <!-- 第二排：歷史最高、Drawdown、Underwater -->
   <div class="summary-grid-bottom">
     <div class="card">
       <div class="card-label">歷史最高</div>
