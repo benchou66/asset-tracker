@@ -984,6 +984,7 @@
       <button class="chart-tab" onclick="switchChart('attainment')">里程碑達成率</button>
       <button class="chart-tab" onclick="switchChart('trajectory')">預期資產軌跡</button>
       <button class="chart-tab" onclick="switchChart('ratesolve')">剩餘所需報酬率</button>
+      <button class="chart-tab" onclick="switchChart('stackedarea')">資產結構</button>
     </div>
 
     <!-- Chart Panels -->
@@ -1084,6 +1085,17 @@
           </div>
           <div style="font-family:var(--font-mono);font-size:0.62rem;color:var(--muted);text-align:center;">
             RATE(nper, −PMT, −PV, FV)　使用牛頓迭代法求解
+          </div>
+        </div>
+
+        <!-- Stacked Area -->
+        <div id="chart-stackedarea" class="analytics-panel" style="display:none;">
+          <div style="margin-bottom:10px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+            <div id="stackedLegend" style="display:flex;gap:12px;flex-wrap:wrap;font-family:var(--font-mono);font-size:0.68rem;"></div>
+          </div>
+          <div class="chart-wrap" style="height:300px;"><canvas id="stackedAreaChart"></canvas></div>
+          <div style="font-family:var(--font-mono);font-size:0.62rem;color:var(--muted);margin-top:8px;text-align:center;">
+            ※ 市值來源為 個股庫存明細，每次更新後反映最新數據
           </div>
         </div>
 
@@ -2068,6 +2080,7 @@
       case 'attainment': renderAttainmentChart(); break;
       case 'trajectory': renderTrajectoryChart(); break;
       case 'ratesolve':  calcRateSolve(); break;
+      case 'stackedarea': renderStackedAreaChart(); break;
     }
   }
 
@@ -2621,6 +2634,165 @@
       resultEl.textContent = (rate >= 0 ? '+' : '') + pct + '%';
       resultEl.style.color = rate <= 0.15 ? 'var(--green)' : rate <= 0.25 ? 'var(--amber)' : 'var(--red)';
     }
+  }
+
+
+  // ── 資產結構堆疊面積圖 ─────────────────────────────────────────
+  function renderStackedAreaChart() {
+    // 分類定義
+    const CATEGORIES = [
+      {
+        key: 'defensive',
+        label: '防禦型',
+        codes: ['00720B', '00713', '0056'],
+        color: 'rgba(37,99,235,0.75)',
+        border: '#2563eb'
+      },
+      {
+        key: 'core',
+        label: '穩健核心型',
+        codes: ['006208', '00922', '00646', '0050'],
+        color: 'rgba(5,150,105,0.75)',
+        border: '#059669'
+      },
+      {
+        key: 'aggressive',
+        label: '攻擊型',
+        codes: ['00935'],
+        color: 'rgba(220,38,38,0.75)',
+        border: '#dc2626'
+      }
+    ];
+
+    // 收集所有有 holdings 快照的時間點
+    // holdings 存的是最新一筆，加上 entries 的歷史
+    // 這裡用 holdings history（若有）或單點快照
+    // 先嘗試從 Firebase logs 取得歷史 holdings，若無則用目前 holdings
+    const snapshots = [];
+
+    // 從 entries 的日期 + 目前 holdings 組成唯一快照（單點）
+    if (holdings && holdings.stocks && holdings.stocks.length > 0) {
+      const date = holdings.date || (entries.length ? [...entries].sort((a,b)=>b.date.localeCompare(a.date))[0].date : '');
+      if (date) snapshots.push({ date, stocks: holdings.stocks });
+    }
+
+    // 若只有一個快照，改為顯示「目前組成圓餅/橫條」提示
+    // 但仍繪製：以歷史 entries 日期為 x 軸，每筆 holdings 快照補插值
+    // 實際上 holdings 只有最新一筆，所以用當下資料畫單欄堆疊橫條做展示
+    // 同時以 entries 歷史資料推算各期市值比例（按持股比例縮放）
+    const sorted = [...entries].sort((a,b) => a.date.localeCompare(b.date));
+    if (sorted.length === 0 || snapshots.length === 0) {
+      document.getElementById('chart-stackedarea').innerHTML =
+        '<div class="empty">需有資產記錄與個股庫存明細才能顯示此圖</div>';
+      return;
+    }
+
+    // 計算各分類在最新 holdings 的佔比
+    const latestStocks = snapshots[0].stocks;
+    const totalHoldingsValue = latestStocks.reduce((s, st) => s + (parseFloat(st.value) || 0), 0);
+
+    const catRatios = {}; // { defensive: 0.33, core: 0.45, aggressive: 0.22 }
+    CATEGORIES.forEach(cat => {
+      const catVal = latestStocks
+        .filter(st => cat.codes.includes(st.code))
+        .reduce((s, st) => s + (parseFloat(st.value) || 0), 0);
+      catRatios[cat.key] = totalHoldingsValue > 0 ? catVal / totalHoldingsValue : 0;
+    });
+
+    // 其他（未分類）
+    const classifiedCodes = CATEGORIES.flatMap(c => c.codes);
+    const otherVal = latestStocks
+      .filter(st => !classifiedCodes.includes(st.code))
+      .reduce((s, st) => s + (parseFloat(st.value) || 0), 0);
+    const otherRatio = totalHoldingsValue > 0 ? otherVal / totalHoldingsValue : 0;
+
+    // 以每筆 entry 的 amount × 各分類佔比 → 推算歷史市值
+    const labels = sorted.map(e => e.date);
+    const datasets = CATEGORIES.map(cat => ({
+      label: cat.label + ' (' + cat.codes.join('、') + ')',
+      data: sorted.map(e => Math.round(e.amount * catRatios[cat.key])),
+      backgroundColor: cat.color,
+      borderColor: cat.border,
+      borderWidth: 1.5,
+      fill: true,
+      tension: 0.3,
+      pointRadius: 2,
+      pointHoverRadius: 5
+    }));
+
+    // 若有其他未分類
+    if (otherRatio > 0.005) {
+      datasets.push({
+        label: '其他',
+        data: sorted.map(e => Math.round(e.amount * otherRatio)),
+        backgroundColor: 'rgba(100,116,139,0.6)',
+        borderColor: '#64748b',
+        borderWidth: 1.5,
+        fill: true,
+        tension: 0.3,
+        pointRadius: 2,
+        pointHoverRadius: 5
+      });
+    }
+
+    // 更新 legend
+    const legendEl = document.getElementById('stackedLegend');
+    legendEl.innerHTML = CATEGORIES.map(cat =>
+      `<span style="display:flex;align-items:center;gap:4px;">
+        <span style="width:10px;height:10px;border-radius:2px;background:${cat.border};display:inline-block;"></span>
+        ${cat.label} <strong>${(catRatios[cat.key]*100).toFixed(1)}%</strong>
+      </span>`
+    ).join('') + (otherRatio > 0.005 ?
+      `<span style="display:flex;align-items:center;gap:4px;">
+        <span style="width:10px;height:10px;border-radius:2px;background:#64748b;display:inline-block;"></span>
+        其他 <strong>${(otherRatio*100).toFixed(1)}%</strong>
+      </span>` : '');
+
+    const wrap = document.getElementById('chart-stackedarea');
+    if (!wrap.querySelector('canvas')) {
+      wrap.innerHTML += '<div class="chart-wrap" style="height:300px;"><canvas id="stackedAreaChart"></canvas></div>';
+    }
+
+    chartInstances.stackedarea = new Chart(document.getElementById('stackedAreaChart'), {
+      type: 'line',
+      data: { labels, datasets },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: ctx => {
+                const ratio = CATEGORIES[ctx.datasetIndex]
+                  ? (catRatios[CATEGORIES[ctx.datasetIndex]?.key] * 100).toFixed(1)
+                  : (otherRatio * 100).toFixed(1);
+                return ` ${ctx.dataset.label.split(' (')[0]}：NT$ ${ctx.raw.toLocaleString()} (${ratio}%)`;
+              },
+              footer: items => {
+                const total = items.reduce((s, i) => s + i.raw, 0);
+                return '合計：NT$ ' + total.toLocaleString();
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: { display: false },
+            stacked: true,
+            ticks: { font: { family: 'Space Mono', size: 10 }, color: '#64748b', maxTicksLimit: 10 }
+          },
+          y: {
+            stacked: true,
+            grid: { color: '#dde3ec' },
+            ticks: {
+              font: { family: 'Space Mono', size: 10 }, color: '#64748b',
+              callback: v => v >= 1000000 ? (v/1000000).toFixed(1)+'M' : v.toLocaleString()
+            }
+          }
+        }
+      }
+    });
   }
 
 </script>
