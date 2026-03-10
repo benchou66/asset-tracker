@@ -740,7 +740,7 @@
 <div id="appWrapper">
 <div class="wrapper">
   <header>
-    <div class="logo">ASSET<span>/</span>TRACKER <span style="font-size:0.6rem;color:var(--muted);letter-spacing:0.05em;">v3</span></div>
+    <div class="logo">ASSET<span>/</span>TRACKER <span style="font-size:0.6rem;color:var(--muted);letter-spacing:0.05em;">v4</span></div>
     <div style="display:flex;align-items:center;gap:14px;">
       <div class="header-date" id="headerDate"></div>
       <button class="btn-logout" onclick="doSignOut()">登出</button>
@@ -981,6 +981,9 @@
       <button class="chart-tab" onclick="switchChart('bondstock')">股債占比</button>
       <button class="chart-tab" onclick="switchChart('vsindex')">vs 加權指數</button>
       <button class="chart-tab" onclick="switchChart('annual')">年化報酬率</button>
+      <button class="chart-tab" onclick="switchChart('attainment')">里程碑達成率</button>
+      <button class="chart-tab" onclick="switchChart('trajectory')">預期資產軌跡</button>
+      <button class="chart-tab" onclick="switchChart('ratesolve')">剩餘所需報酬率</button>
     </div>
 
     <!-- Chart Panels -->
@@ -1017,6 +1020,71 @@
         <!-- Annual Return -->
         <div id="chart-annual" class="analytics-panel" style="display:none;">
           <div class="chart-wrap" style="height:280px;"><canvas id="annualChart"></canvas></div>
+        </div>
+
+        <!-- Attainment Rate -->
+        <div id="chart-attainment" class="analytics-panel" style="display:none;">
+          <div style="margin-bottom:12px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+            <div style="font-family:var(--font-mono);font-size:0.7rem;color:var(--muted);">目標：<strong style="color:var(--text);">NT$ 40,000,000</strong></div>
+            <div id="attainmentRate" style="font-family:var(--font-mono);font-size:1.4rem;font-weight:700;color:var(--accent);"></div>
+          </div>
+          <div style="background:var(--surface2);border-radius:8px;height:20px;overflow:hidden;margin-bottom:16px;border:1px solid var(--border);">
+            <div id="attainmentBar" style="height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:8px;transition:width 0.8s ease;width:0%;"></div>
+          </div>
+          <div class="chart-wrap" style="height:240px;"><canvas id="attainmentChart"></canvas></div>
+        </div>
+
+        <!-- Trajectory -->
+        <div id="chart-trajectory" class="analytics-panel" style="display:none;">
+          <div style="margin-bottom:12px;display:flex;gap:16px;flex-wrap:wrap;align-items:center;">
+            <div style="font-family:var(--font-mono);font-size:0.68rem;color:var(--muted);">r=10.5%　PMT=360,000+股息　目標=40M</div>
+            <label style="font-family:var(--font-mono);font-size:0.68rem;color:var(--muted);display:flex;align-items:center;gap:6px;">
+              起算年：<input id="trajStartYear" type="number" value="" placeholder="自動"
+                style="width:70px;padding:2px 6px;border:1px solid var(--border);border-radius:4px;font-family:var(--font-mono);font-size:0.68rem;background:var(--surface2);"
+                oninput="renderTrajectoryChart()">
+            </label>
+          </div>
+          <div class="chart-wrap" style="height:280px;"><canvas id="trajectoryChart"></canvas></div>
+          <div style="font-family:var(--font-mono);font-size:0.62rem;color:var(--muted);margin-top:8px;text-align:center;">
+            FV = PV×(1+r)^n + PMT×[(1+r)^n−1]/r　｜　橘線 = 預期軌跡　藍線 = 實際資產
+          </div>
+        </div>
+
+        <!-- Rate Solve -->
+        <div id="chart-ratesolve" class="analytics-panel" style="display:none;">
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:18px;">
+            <div class="stat-box">
+              <div class="stat-box-label">剩餘年數 (nper)</div>
+              <input id="rs_nper" type="number" value="8" min="1" max="50"
+                style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-family:var(--font-mono);font-size:1rem;font-weight:700;background:var(--surface2);color:var(--text);margin-top:4px;"
+                oninput="calcRateSolve()">
+            </div>
+            <div class="stat-box">
+              <div class="stat-box-label">每年投入 PMT (NT$)</div>
+              <input id="rs_pmt" type="number" value="360000" step="10000"
+                style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-family:var(--font-mono);font-size:1rem;font-weight:700;background:var(--surface2);color:var(--text);margin-top:4px;"
+                oninput="calcRateSolve()">
+            </div>
+            <div class="stat-box">
+              <div class="stat-box-label">目標金額 FV (NT$)</div>
+              <input id="rs_fv" type="number" value="40000000" step="1000000"
+                style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-family:var(--font-mono);font-size:1rem;font-weight:700;background:var(--surface2);color:var(--text);margin-top:4px;"
+                oninput="calcRateSolve()">
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px;">
+            <div class="stat-box" style="text-align:center;">
+              <div class="stat-box-label">目前總市值 (PV)</div>
+              <div id="rs_pv_display" style="font-family:var(--font-mono);font-size:1rem;font-weight:700;color:var(--accent);margin-top:6px;"></div>
+            </div>
+            <div class="stat-box" style="text-align:center;background:linear-gradient(135deg,rgba(37,99,235,0.05),rgba(124,58,237,0.05));">
+              <div class="stat-box-label">所需年化報酬率</div>
+              <div id="rs_result" style="font-family:var(--font-mono);font-size:1.8rem;font-weight:700;color:var(--accent2);margin-top:4px;">—</div>
+            </div>
+          </div>
+          <div style="font-family:var(--font-mono);font-size:0.62rem;color:var(--muted);text-align:center;">
+            RATE(nper, −PMT, −PV, FV)　使用牛頓迭代法求解
+          </div>
         </div>
 
       </div>
@@ -1997,6 +2065,9 @@
       case 'bondstock':  renderBondStockChart(); break;
       case 'vsindex':    renderVsIndexChart(); break;
       case 'annual':     renderAnnualChart(); break;
+      case 'attainment': renderAttainmentChart(); break;
+      case 'trajectory': renderTrajectoryChart(); break;
+      case 'ratesolve':  calcRateSolve(); break;
     }
   }
 
@@ -2140,19 +2211,44 @@
       return m ? parseFloat(m[1]) : (e.index != null ? e.index : null);
     };
 
-    const withIndex = sorted.filter(e => getIndex(e) != null && e.returnRate != null);
-    if (withIndex.length < 2) {
+    // 藍線只需要有 amount，橘線需要有加權指數
+    const withAmount = sorted.filter(e => e.amount != null);
+    const withIndex  = sorted.filter(e => getIndex(e) != null);
+    if (withAmount.length < 2 || withIndex.length < 2) {
       document.getElementById('chart-vsindex').innerHTML =
-        '<div class="empty">需有加權指數與預估報酬率資料才能顯示此圖</div>';
+        '<div class="empty">需有總資產與加權指數資料才能顯示此圖</div>';
       return;
     }
 
-    const baseIndex = getIndex(withIndex[0]);
-    const labels    = withIndex.map(e => e.date);
-    const assetData = withIndex.map(e => parseFloat((e.returnRate).toFixed(2)));
-    const indexData = withIndex.map(e => {
-      const idx = getIndex(e);
-      return parseFloat(((idx - baseIndex) / baseIndex * 100).toFixed(2));
+    // 取所有有 amount 的日期為 labels
+    const labels = withAmount.map(e => e.date);
+
+    // 藍線：每年第一筆有總資產的記錄為基準點(0%)，計算相對基準的漲跌幅
+    const yearBaseMap = {};
+    withAmount.forEach(e => {
+      const yr = e.date.substring(0, 4);
+      if (yearBaseMap[yr] == null) yearBaseMap[yr] = e.amount;
+    });
+    const assetData = withAmount.map(e => {
+      const yr = e.date.substring(0, 4);
+      const base = yearBaseMap[yr];
+      return parseFloat(((e.amount - base) / base * 100).toFixed(2));
+    });
+
+    // 橘線：每年第一筆有加權指數的記錄為基準點(0%)
+    const yearIndexBaseMap = {};
+    withIndex.forEach(e => {
+      const yr = e.date.substring(0, 4);
+      if (yearIndexBaseMap[yr] == null) yearIndexBaseMap[yr] = getIndex(e);
+    });
+    const indexData = withAmount.map(e => {
+      const yr = e.date.substring(0, 4);
+      const base = yearIndexBaseMap[yr];
+      if (base == null) return null;
+      const match = withIndex.filter(x => x.date <= e.date).pop();
+      if (!match) return null;
+      const idx = getIndex(match);
+      return parseFloat(((idx - base) / base * 100).toFixed(2));
     });
 
     // restore canvas if needed
@@ -2167,7 +2263,7 @@
         labels,
         datasets: [
           {
-            label: '預估報酬率 % (總市值 vs 成本)',
+            label: '總資產漲跌 % (相對年初第一筆)',
             data: assetData,
             borderColor: '#2563eb',
             backgroundColor: 'rgba(37,99,235,0.08)',
@@ -2192,9 +2288,9 @@
           tooltip: { callbacks: {
             label: ctx => ` ${ctx.dataset.label}：${ctx.raw > 0 ? '+' : ''}${ctx.raw}%`,
             afterLabel: ctx => {
-              const e = withIndex[ctx.dataIndex];
-              if (ctx.datasetIndex === 0) return ` 成本：${e.cost ? fmt(e.cost) : '—'}  市值：${fmt(e.amount)}`;
-              return ` 加權：${getIndex(e).toLocaleString()}`;
+              if (ctx.datasetIndex === 0) { const e = withAmount[ctx.dataIndex]; return e ? ` 市值：${fmt(e.amount)}` : ''; }
+              const e = withIndex.filter(x => x.date <= withAmount[ctx.dataIndex]?.date).pop();
+              return e ? ` 加權：${getIndex(e).toLocaleString()}` : '';
             }
           }}
         },
@@ -2301,6 +2397,232 @@
     if (chartInstances[activeChart]) { chartInstances[activeChart].destroy(); delete chartInstances[activeChart]; }
     renderAnalyticsChart(activeChart);
   }
+
+  // ── 里程碑達成率 ─────────────────────────────────────────────────
+  function renderAttainmentChart() {
+    const TARGET = 40000000;
+    const sorted = [...entries].sort((a,b) => a.date.localeCompare(b.date));
+    if (sorted.length < 1) return;
+
+    const latest = sorted[sorted.length - 1].amount;
+    const rate = (latest / TARGET * 100);
+    document.getElementById('attainmentRate').textContent = rate.toFixed(2) + '%';
+    document.getElementById('attainmentBar').style.width = Math.min(rate, 100) + '%';
+
+    const labels = sorted.map(e => e.date);
+    const data   = sorted.map(e => parseFloat((e.amount / TARGET * 100).toFixed(2)));
+
+    chartInstances.attainment = new Chart(document.getElementById('attainmentChart'), {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [
+          {
+            label: '達成率 %',
+            data,
+            borderColor: '#2563eb',
+            backgroundColor: 'rgba(37,99,235,0.07)',
+            fill: true, tension: 0.3,
+            pointRadius: 4, pointBackgroundColor: '#fff',
+            pointBorderColor: '#2563eb', pointBorderWidth: 2
+          },
+          {
+            label: '目標 100%',
+            data: labels.map(() => 100),
+            borderColor: 'rgba(220,38,38,0.5)',
+            borderDash: [6,4],
+            pointRadius: 0,
+            fill: false
+          }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { labels: { font: { family: 'Space Mono', size: 11 }, color: '#64748b', boxWidth: 14 } },
+          tooltip: { callbacks: {
+            label: ctx => ` ${ctx.dataset.label}：${ctx.raw >= 0 ? '+' : ''}${ctx.raw}%`,
+            afterLabel: ctx => {
+              if (ctx.datasetIndex !== 0) return '';
+              const e = sorted[ctx.dataIndex];
+              return ` 市值：${fmt(e.amount)}　缺口：${fmt(TARGET - e.amount)}`;
+            }
+          }}
+        },
+        scales: {
+          x: { grid: { display: false }, ticks: { font: { family: 'Space Mono', size: 10 }, color: '#64748b', maxTicksLimit: 10 } },
+          y: { grid: { color: '#dde3ec' }, ticks: { font: { family: 'Space Mono', size: 10 }, color: '#64748b', callback: v => v + '%' } }
+        }
+      }
+    });
+  }
+
+  // ── 預期資產軌跡 ──────────────────────────────────────────────────
+  function renderTrajectoryChart() {
+    if (entries.length < 1) return;
+    const sorted = [...entries].sort((a,b) => a.date.localeCompare(b.date));
+
+    const r = 0.105;
+    const TARGET = 40000000;
+    const PMT_BASE = 360000;
+
+    // 起算點：使用者指定年份的第一筆，或整體最早一筆
+    const inputYear = parseInt(document.getElementById('trajStartYear').value);
+    let baseEntry;
+    if (!isNaN(inputYear)) {
+      baseEntry = sorted.find(e => e.date.startsWith(String(inputYear)));
+    }
+    if (!baseEntry) baseEntry = sorted[0];
+
+    const PV = baseEntry.amount;
+    const baseDate = new Date(baseEntry.date);
+
+    // 計算每筆實際資產的預期軌跡值
+    // 軌跡只顯示從 baseEntry 開始往後推 20 年，每年一個點
+    const maxYears = 20;
+    const trajLabels = [], trajData = [];
+    for (let n = 0; n <= maxYears; n++) {
+      const yr = baseDate.getFullYear() + n;
+      trajLabels.push(String(yr));
+      // 簡單估算：每年股息約為市值的 2%
+      const avgPMT = PMT_BASE + PV * 0.02;
+      const fv = PV * Math.pow(1 + r, n) + (n === 0 ? 0 : avgPMT * ((Math.pow(1 + r, n) - 1) / r));
+      trajData.push(Math.round(fv));
+      if (fv >= TARGET * 1.05) break;
+    }
+
+    // 實際資產：每年最後一筆，從 baseEntry 開始
+    const actualLabels = [], actualData = [];
+    const byYear = {};
+    sorted.forEach(e => {
+      if (e.date >= baseEntry.date) {
+        const yr = e.date.slice(0, 4);
+        byYear[yr] = e.amount;
+      }
+    });
+    Object.keys(byYear).sort().forEach(yr => {
+      actualLabels.push(yr);
+      actualData.push(byYear[yr]);
+    });
+
+    // 合併 labels
+    const allLabels = [...new Set([...trajLabels, ...actualLabels])].sort();
+
+    const trajMap = {};
+    trajLabels.forEach((l, i) => trajMap[l] = trajData[i]);
+    const actualMap = {};
+    actualLabels.forEach((l, i) => actualMap[l] = actualData[i]);
+
+    if (chartInstances.trajectory) { chartInstances.trajectory.destroy(); delete chartInstances.trajectory; }
+    chartInstances.trajectory = new Chart(document.getElementById('trajectoryChart'), {
+      type: 'line',
+      data: {
+        labels: allLabels,
+        datasets: [
+          {
+            label: '預期軌跡 (FV)',
+            data: allLabels.map(l => trajMap[l] ?? null),
+            borderColor: '#d97706',
+            backgroundColor: 'rgba(217,119,6,0.06)',
+            fill: true, tension: 0.3, borderDash: [5,3],
+            pointRadius: 4, pointBackgroundColor: '#fff',
+            pointBorderColor: '#d97706', pointBorderWidth: 2,
+            spanGaps: true
+          },
+          {
+            label: '實際資產',
+            data: allLabels.map(l => actualMap[l] ?? null),
+            borderColor: '#2563eb',
+            backgroundColor: 'rgba(37,99,235,0.08)',
+            fill: true, tension: 0.3,
+            pointRadius: 5, pointBackgroundColor: '#fff',
+            pointBorderColor: '#2563eb', pointBorderWidth: 2,
+            spanGaps: false
+          },
+          {
+            label: '目標 NT$40M',
+            data: allLabels.map(() => TARGET),
+            borderColor: 'rgba(220,38,38,0.45)',
+            borderDash: [6,4], pointRadius: 0, fill: false
+          }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { labels: { font: { family: 'Space Mono', size: 11 }, color: '#64748b', boxWidth: 14 } },
+          tooltip: { callbacks: {
+            label: ctx => {
+              if (ctx.raw == null) return '';
+              return ` ${ctx.dataset.label}：NT$ ${ctx.raw.toLocaleString()}`;
+            }
+          }}
+        },
+        scales: {
+          x: { grid: { display: false }, ticks: { font: { family: 'Space Mono', size: 10 }, color: '#64748b' } },
+          y: { grid: { color: '#dde3ec' }, ticks: {
+            font: { family: 'Space Mono', size: 10 }, color: '#64748b',
+            callback: v => v >= 1000000 ? (v/1000000).toFixed(1) + 'M' : v.toLocaleString()
+          }}
+        }
+      }
+    });
+  }
+
+  // ── 剩餘所需報酬率 RATE() 求解 ───────────────────────────────────
+  function calcRateSolve() {
+    // 取得目前最新資產
+    const sorted = [...entries].sort((a,b) => a.date.localeCompare(b.date));
+    const pv = sorted.length ? sorted[sorted.length - 1].amount : 0;
+    document.getElementById('rs_pv_display').textContent = 'NT$ ' + pv.toLocaleString();
+
+    const nper = parseFloat(document.getElementById('rs_nper').value) || 8;
+    const pmt  = parseFloat(document.getElementById('rs_pmt').value) || 360000;
+    const fv   = parseFloat(document.getElementById('rs_fv').value) || 40000000;
+
+    if (pv <= 0 || nper <= 0) {
+      document.getElementById('rs_result').textContent = '—';
+      return;
+    }
+
+    // 牛頓迭代法求解 RATE
+    // 方程式：PV*(1+r)^n + PMT*[(1+r)^n - 1]/r = FV
+    // => f(r) = PV*(1+r)^n + PMT*[(1+r)^n - 1]/r - FV = 0
+    function f(r) {
+      if (Math.abs(r) < 1e-9) return pv + pmt * nper - fv; // r≈0 時的極限
+      const factor = Math.pow(1 + r, nper);
+      return pv * factor + pmt * (factor - 1) / r - fv;
+    }
+    function df(r) {
+      if (Math.abs(r) < 1e-9) return pv * nper + pmt * nper * (nper - 1) / 2;
+      const factor = Math.pow(1 + r, nper);
+      const dfactor = nper * Math.pow(1 + r, nper - 1);
+      return pv * dfactor + pmt * (dfactor * r - (factor - 1)) / (r * r);
+    }
+
+    let rate = 0.08; // 初始猜測
+    for (let i = 0; i < 200; i++) {
+      const fr = f(rate);
+      const dfr = df(rate);
+      if (Math.abs(dfr) < 1e-15) break;
+      const next = rate - fr / dfr;
+      if (Math.abs(next - rate) < 1e-9) { rate = next; break; }
+      rate = next;
+      if (rate < -0.99) rate = -0.5;
+      if (rate > 10) rate = 5;
+    }
+
+    const resultEl = document.getElementById('rs_result');
+    if (isNaN(rate) || !isFinite(rate)) {
+      resultEl.textContent = '無解';
+      resultEl.style.color = 'var(--muted)';
+    } else {
+      const pct = (rate * 100).toFixed(2);
+      resultEl.textContent = (rate >= 0 ? '+' : '') + pct + '%';
+      resultEl.style.color = rate <= 0.15 ? 'var(--green)' : rate <= 0.25 ? 'var(--amber)' : 'var(--red)';
+    }
+  }
+
 </script>
 </body>
 </html>
