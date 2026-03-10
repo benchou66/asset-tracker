@@ -1840,8 +1840,12 @@
     const existing = (holdings.stocks || []);
     holdings.stocks = parsed.map(s => {
       const prev = existing.find(e => e.code === s.code);
-      const mergedCost = (s.cost && s.cost > 0) ? s.cost : (prev?.cost || 0);
-      const merged = { ...s, cost: mergedCost };
+      const parseN = v => { const n = parseFloat(String(v||'').replace(/[,+%\s]/g,'')); return isNaN(n)?0:n; };
+      const importedCost = parseN(s.cost);
+      const prevCost = parseN(prev?.cost);
+      const mergedCost = importedCost > 0 ? importedCost : prevCost;
+      const mergedPnl  = parseN(s.pnl);
+      const merged = { ...s, cost: mergedCost, pnl: mergedPnl, pct: parseN(s.pct) };
       // cost 有值但損益是 0 → 重新計算
       if (mergedCost > 0 && merged.pnl === 0) {
         merged.pnl = Math.round(merged.value - mergedCost);
@@ -1959,9 +1963,18 @@
     }
 
     dateEl.textContent = holdings.date ? `更新：${holdings.date}` : '';
-    const totalVal = holdings.stocks.reduce((s,r) => s + (r.value||0), 0);
-    const totalPnl = holdings.stocks.reduce((s,r) => s + (r.pnl||0), 0);
-    const rows = [...holdings.stocks].map((s,i) => ({...s, _i: i})).sort((a,b) => (b.value||0) - (a.value||0));
+    // 正規化：pnl/pct 可能從 Firebase 讀回字串，先轉數字
+    const parseNum = v => { const n = parseFloat(String(v||'').replace(/[,+%\s]/g,'')); return isNaN(n)?0:n; };
+    const normalized = holdings.stocks.map(s => ({
+      ...s,
+      value: parseNum(s.value),
+      cost:  parseNum(s.cost),
+      pnl:   parseNum(s.pnl),
+      pct:   parseNum(s.pct),
+    }));
+    const totalVal = normalized.reduce((s,r) => s + (r.value||0), 0);
+    const totalPnl = normalized.reduce((s,r) => s + (r.pnl||0), 0);
+    const rows = [...normalized].map((s,i) => ({...s, _i: i})).sort((a,b) => (b.value||0) - (a.value||0));
 
     el.innerHTML = `<div style="overflow-x:auto;">
       <table class="htable">
