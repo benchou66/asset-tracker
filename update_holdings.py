@@ -15,7 +15,6 @@ from datetime import datetime, timezone, timedelta
 
 # ── 設定 ──────────────────────────────────────────────
 FIREBASE_DATABASE_URL = os.environ["FIREBASE_DATABASE_URL"]
-FIREBASE_USER_UID     = os.environ["FIREBASE_USER_UID"]
 SERVICE_ACCOUNT_JSON  = os.environ["FIREBASE_SERVICE_ACCOUNT"]
 
 # 台灣時區
@@ -87,7 +86,7 @@ def main():
     print(f"📅 {TODAY} 開始更新個股現值...")
 
     # ── 讀取 Firebase 現有 holdings ──────────────────────
-    ref_path = f"users/{FIREBASE_USER_UID}/holdings"
+    ref_path = f"holdings"
     holdings_ref = db.reference(ref_path)
     holdings = holdings_ref.get()
 
