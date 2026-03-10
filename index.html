@@ -2840,9 +2840,12 @@
     // 更新 legend
     const legendEl = document.getElementById('stackedLegend');
     legendEl.innerHTML = CATEGORIES.map(cat =>
-      `<span style="display:flex;align-items:center;gap:4px;">
-        <span style="width:10px;height:10px;border-radius:2px;background:${cat.border};display:inline-block;"></span>
-        ${cat.label} <strong>${(catRatios[cat.key]*100).toFixed(1)}%</strong>
+      `<span style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="width:10px;height:10px;border-radius:2px;background:${cat.border};display:inline-block;flex-shrink:0;margin-top:2px;"></span>
+        <span>
+          ${cat.label}<span style="color:var(--muted);font-size:0.62rem;margin-left:3px;">(${cat.codes.join('、')})</span>
+          <strong style="margin-left:4px;">${(catRatios[cat.key]*100).toFixed(1)}%</strong>
+        </span>
       </span>`
     ).join('') + (otherRatio > 0.005 ?
       `<span style="display:flex;align-items:center;gap:4px;">
