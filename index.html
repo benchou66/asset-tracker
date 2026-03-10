@@ -739,7 +739,7 @@
 <div id="appWrapper">
 <div class="wrapper">
   <header>
-    <div class="logo">ASSET<span>/</span>TRACKER <span style="font-size:0.6rem;color:var(--muted);letter-spacing:0.05em;">v1</span></div>
+    <div class="logo">ASSET<span>/</span>TRACKER <span style="font-size:0.6rem;color:var(--muted);letter-spacing:0.05em;">v2</span></div>
     <div style="display:flex;align-items:center;gap:14px;">
       <div class="header-date" id="headerDate"></div>
       <button class="btn-logout" onclick="doSignOut()">登出</button>
@@ -1988,20 +1988,47 @@
   function renderMonthlyChart() {
     if (entries.length < 2) return;
     const sorted = [...entries].sort((a,b) => a.date.localeCompare(b.date));
+
+    // Get last entry of each month
+    const byMonth = {};
+    sorted.forEach(e => {
+      const mo = e.date.slice(0, 7); // YYYY-MM
+      byMonth[mo] = e; // overwrite → keeps last entry of month
+    });
+
+    const months = Object.keys(byMonth).sort();
     const labels = [], data = [];
-    for (let i = 1; i < sorted.length; i++) {
-      const pct = ((sorted[i].amount - sorted[i-1].amount) / sorted[i-1].amount * 100);
-      labels.push(sorted[i].date.slice(0,7));
+
+    for (let i = 1; i < months.length; i++) {
+      const prev = byMonth[months[i-1]];
+      const curr = byMonth[months[i]];
+      const pct  = (curr.amount - prev.amount) / prev.amount * 100;
+      labels.push(months[i]);
       data.push(parseFloat(pct.toFixed(2)));
     }
-    const colors = data.map(v => v >= 0 ? 'rgba(5,150,105,0.75)' : 'rgba(220,38,38,0.75)');
+
+    if (!labels.length) return;
+
+    const colors      = data.map(v => v >= 0 ? 'rgba(5,150,105,0.75)' : 'rgba(220,38,38,0.75)');
     const borderColors = data.map(v => v >= 0 ? '#059669' : '#dc2626');
+
     chartInstances.monthly = new Chart(document.getElementById('monthlyChart'), {
       type: 'bar',
       data: { labels, datasets: [{ label: '月報酬率 %', data, backgroundColor: colors, borderColor: borderColors, borderWidth: 1.5, borderRadius: 4 }] },
       options: {
         responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` ${ctx.raw > 0 ? '+' : ''}${ctx.raw}%` } } },
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: {
+            label: ctx => ` ${ctx.raw > 0 ? '+' : ''}${ctx.raw}%`,
+            afterLabel: ctx => {
+              const mo = labels[ctx.dataIndex];
+              const prevMo = months[months.indexOf(mo) - 1];
+              const curr = byMonth[mo], prev = byMonth[prevMo];
+              return [` 上月末：${prev.date} ${fmt(prev.amount)}`, ` 本月末：${curr.date} ${fmt(curr.amount)}`];
+            }
+          }}
+        },
         scales: {
           x: { grid: { display: false }, ticks: { font: { family: 'Space Mono', size: 10 }, color: '#64748b' } },
           y: { grid: { color: '#dde3ec' }, ticks: { font: { family: 'Space Mono', size: 10 }, color: '#64748b', callback: v => v + '%' },
@@ -2091,36 +2118,73 @@
   function renderVsIndexChart() {
     if (entries.length < 2) return;
     const sorted = [...entries].sort((a,b) => a.date.localeCompare(b.date));
-    const withIndex = sorted.filter(e => /加權(\d+)/.test(e.note || ''));
+
+    // fix: parse float (支援小數點) from note 加權XXXXX.XX
+    const getIndex = e => {
+      const m = (e.note || '').match(/加權([\d.]+)/);
+      return m ? parseFloat(m[1]) : (e.index != null ? e.index : null);
+    };
+
+    const withIndex = sorted.filter(e => getIndex(e) != null && e.returnRate != null);
     if (withIndex.length < 2) {
       document.getElementById('chart-vsindex').innerHTML =
-        '<div class="empty">備註中無加權指數資料（格式：加權NNNNN）</div>';
+        '<div class="empty">需有加權指數與預估報酬率資料才能顯示此圖</div>';
       return;
     }
-    const base = withIndex[0];
-    const baseAsset = base.amount;
-    const baseIndex = parseInt(base.note.match(/加權(\d+)/)[1]);
-    const labels = withIndex.map(e => e.date.slice(0,7));
-    const assetData  = withIndex.map(e => parseFloat(((e.amount - baseAsset)/baseAsset*100).toFixed(2)));
-    const indexData  = withIndex.map(e => {
-      const idx = parseInt(e.note.match(/加權(\d+)/)[1]);
-      return parseFloat(((idx - baseIndex)/baseIndex*100).toFixed(2));
+
+    const baseIndex = getIndex(withIndex[0]);
+    const labels    = withIndex.map(e => e.date);
+    const assetData = withIndex.map(e => parseFloat((e.returnRate).toFixed(2)));
+    const indexData = withIndex.map(e => {
+      const idx = getIndex(e);
+      return parseFloat(((idx - baseIndex) / baseIndex * 100).toFixed(2));
     });
+
+    // restore canvas if needed
+    const wrap = document.getElementById('chart-vsindex');
+    if (!wrap.querySelector('canvas')) {
+      wrap.innerHTML = '<div class="chart-wrap" style="height:280px;"><canvas id="vsindexChart"></canvas></div>';
+    }
 
     chartInstances.vsindex = new Chart(document.getElementById('vsindexChart'), {
       type: 'line',
       data: {
         labels,
         datasets: [
-          { label: '資產報酬率 %', data: assetData, borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,0.08)', fill: true, tension: 0.3, pointRadius: 4, pointBackgroundColor: '#fff', pointBorderColor: '#2563eb', pointBorderWidth: 2 },
-          { label: '加權指數漲跌 %', data: indexData, borderColor: '#d97706', backgroundColor: 'rgba(217,119,6,0.06)', fill: true, tension: 0.3, pointRadius: 4, pointBackgroundColor: '#fff', pointBorderColor: '#d97706', pointBorderWidth: 2, borderDash: [5,3] }
+          {
+            label: '預估報酬率 % (總市值 vs 成本)',
+            data: assetData,
+            borderColor: '#2563eb',
+            backgroundColor: 'rgba(37,99,235,0.08)',
+            fill: true, tension: 0.3,
+            pointRadius: 4, pointBackgroundColor: '#fff', pointBorderColor: '#2563eb', pointBorderWidth: 2
+          },
+          {
+            label: '加權指數漲跌 % (相對第一筆)',
+            data: indexData,
+            borderColor: '#d97706',
+            backgroundColor: 'rgba(217,119,6,0.06)',
+            fill: true, tension: 0.3,
+            pointRadius: 4, pointBackgroundColor: '#fff', pointBorderColor: '#d97706', pointBorderWidth: 2,
+            borderDash: [5, 3]
+          }
         ]
       },
       options: {
         responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { labels: { font: { family: 'Space Mono', size: 11 }, color: '#64748b', boxWidth: 14 } }, tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}：${ctx.raw > 0 ? '+' : ''}${ctx.raw}%` } } },
+        plugins: {
+          legend: { labels: { font: { family: 'Space Mono', size: 11 }, color: '#64748b', boxWidth: 14 } },
+          tooltip: { callbacks: {
+            label: ctx => ` ${ctx.dataset.label}：${ctx.raw > 0 ? '+' : ''}${ctx.raw}%`,
+            afterLabel: ctx => {
+              const e = withIndex[ctx.dataIndex];
+              if (ctx.datasetIndex === 0) return ` 成本：${e.cost ? fmt(e.cost) : '—'}  市值：${fmt(e.amount)}`;
+              return ` 加權：${getIndex(e).toLocaleString()}`;
+            }
+          }}
+        },
         scales: {
-          x: { grid: { display: false }, ticks: { font: { family: 'Space Mono', size: 10 }, color: '#64748b' } },
+          x: { grid: { display: false }, ticks: { font: { family: 'Space Mono', size: 10 }, color: '#64748b', maxTicksLimit: 10 } },
           y: { grid: { color: '#dde3ec' }, ticks: { font: { family: 'Space Mono', size: 10 }, color: '#64748b', callback: v => v + '%' } }
         }
       }
@@ -2144,7 +2208,7 @@
       const base = yearBase[yr];
       // first entry of year = 0%
       if (e.date === base.date) {
-        labels.push(e.date.slice(0, 7));
+        labels.push(e.date);
         data.push(0);
         tooltipInfo.push({ base, current: e, cagr: 0, years: 0 });
         return;
@@ -2152,7 +2216,7 @@
       const years = (new Date(e.date) - new Date(base.date)) / (365.25 * 86400000);
       if (years < 0.01) return;
       const cagr = (Math.pow(e.amount / base.amount, 1 / years) - 1) * 100;
-      labels.push(e.date.slice(0, 7));
+      labels.push(e.date);
       data.push(parseFloat(cagr.toFixed(2)));
       tooltipInfo.push({ base, current: e, cagr, years });
     });
