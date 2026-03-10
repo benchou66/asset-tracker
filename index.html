@@ -765,17 +765,20 @@
     </div>
     <div class="card">
       <div class="card-label">總付出成本</div>
-      <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;">
-          <span style="font-size:0.68rem;color:var(--muted);letter-spacing:0.08em;text-transform:uppercase;">預估損益</span>
-          <span id="totalPnlValue" style="font-family:var(--font-mono);font-size:0.82rem;font-weight:700;">—</span>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:6px;">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;">
+          <span style="font-size:0.68rem;color:var(--muted);letter-spacing:0.08em;white-space:nowrap;">預估損益</span>
+          <span id="totalPnlValue" style="font-family:var(--font-mono);font-size:1.15rem;font-weight:700;letter-spacing:-0.02em;">—</span>
         </div>
-        <div style="display:flex;justify-content:space-between;align-items:center;">
-          <span style="font-size:0.68rem;color:var(--muted);letter-spacing:0.08em;text-transform:uppercase;">預估報酬率</span>
-          <span id="totalReturnRate" style="font-family:var(--font-mono);font-size:0.82rem;font-weight:700;">—</span>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;">
+          <span style="font-size:0.68rem;color:var(--muted);letter-spacing:0.08em;white-space:nowrap;">預估報酬率</span>
+          <span id="totalReturnRate" style="font-family:var(--font-mono);font-size:1.15rem;font-weight:700;letter-spacing:-0.02em;">—</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding-top:4px;border-top:1px solid var(--border);">
+          <span style="font-size:0.68rem;color:var(--muted);letter-spacing:0.08em;white-space:nowrap;">總付出成本</span>
+          <span id="totalCostValue" style="font-family:var(--font-mono);font-size:0.78rem;color:var(--muted);">—</span>
         </div>
       </div>
-      <div class="card-value" id="totalCostValue" style="font-size:1.0rem;color:var(--muted);font-weight:400;">—</div>
     </div>
   </div>
 
@@ -1607,7 +1610,6 @@
 
     if (eCost) {
       costEl.textContent = 'NT$ ' + Math.round(eCost).toLocaleString('zh-TW');
-      costEl.className = 'card-value';
     } else {
       costEl.textContent = '—';
     }
