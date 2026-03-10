@@ -17,8 +17,9 @@
     --border: #dde3ec;
     --accent: #2563eb;
     --accent2: #7c3aed;
-    --green: #059669;
-    --red: #dc2626;
+    --green: #dc2626;
+    --red: #059669;
+    --danger: #dc2626;
     --amber: #d97706;
     --text: #1e293b;
     --muted: #64748b;
@@ -247,7 +248,7 @@
   .btn-sm:hover { border-color: var(--accent); color: var(--accent); background: rgba(37,99,235,0.05); }
   .btn-danger {
     background: transparent;
-    color: var(--red);
+    color: var(--danger);
     border: 1px solid rgba(220,38,38,0.3);
     font-size: 0.65rem;
     padding: 3px 8px;
@@ -599,7 +600,7 @@
   .log-icon { font-size: 0.9rem; flex-shrink: 0; }
   .log-msg { color: var(--text); font-size: 0.72rem; line-height: 1.5; }
   .log-item.log-add .log-icon { color: var(--green); }
-  .log-item.log-del .log-icon { color: var(--red); }
+  .log-item.log-del .log-icon { color: var(--danger); }
 
   @media (max-width: 600px) {
     #chart-pie > div, #chart-bondstock > div { grid-template-columns: 1fr; }
@@ -664,7 +665,7 @@
   .login-err {
     margin-top: 14px;
     font-size: 0.72rem;
-    color: var(--red);
+    color: var(--danger);
     font-family: var(--font-mono);
     min-height: 18px;
   }
@@ -675,7 +676,7 @@
     border-radius: 6px; cursor: pointer;
     transition: all 0.2s; letter-spacing: 0.05em;
   }
-  .btn-logout:hover { border-color: var(--red); color: var(--red); }
+  .btn-logout:hover { border-color: var(--danger); color: var(--danger); }
   #appWrapper { display: none; }
 </style>
   <!-- Firebase SDK -->
@@ -857,7 +858,7 @@
 
           <div style="display:flex;gap:8px;margin-top:10px;">
             <button class="btn-sm" onclick="loadSample()">↺ 還原範例資料</button>
-            <button class="btn-sm" style="color:var(--red);border-color:rgba(220,38,38,0.3);" onclick="clearAll()">✕ 清除全部</button>
+            <button class="btn-sm" style="color:var(--danger);border-color:rgba(220,38,38,0.3);" onclick="clearAll()">✕ 清除全部</button>
           </div>
         </div>
       </div>
@@ -888,7 +889,7 @@
         <div style="font-family:var(--font-mono);font-size:0.68rem;color:var(--muted);" id="holdingsDate"></div>
         <button class="btn-sm" style="margin-top:0;" onclick="toggleHoldingsForm()">+ 新增個股</button>
         <button class="btn-sm" style="margin-top:0;border-color:rgba(124,58,237,0.4);color:var(--accent2);" onclick="toggleImportForm()">⬇ 匯入</button>
-        <button class="btn-sm" style="margin-top:0;color:var(--red);border-color:rgba(220,38,38,0.3);" onclick="clearHoldings()">✕ 清除明細</button>
+        <button class="btn-sm" style="margin-top:0;color:var(--danger);border-color:rgba(220,38,38,0.3);" onclick="clearHoldings()">✕ 清除明細</button>
       </div>
     </div>
 
@@ -1903,7 +1904,7 @@
                     onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">✎</button>
                   <button class="icon-btn del" onclick="deleteHolding(${s._i})" title="刪除"
                     style="background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:5px;width:26px;height:26px;cursor:pointer;font-size:0.72rem;transition:all 0.2s;"
-                    onmouseover="this.style.borderColor='var(--red)';this.style.color='var(--red)'"
+                    onmouseover="this.style.borderColor='var(--danger)';this.style.color='var(--danger)'"
                     onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">✕</button>
                 </div>
               </td>
