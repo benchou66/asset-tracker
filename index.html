@@ -739,7 +739,7 @@
 <div id="appWrapper">
 <div class="wrapper">
   <header>
-    <div class="logo">ASSET<span>/</span>TRACKER <span style="font-size:0.6rem;color:var(--muted);letter-spacing:0.05em;">v2</span></div>
+    <div class="logo">ASSET<span>/</span>TRACKER <span style="font-size:0.6rem;color:var(--muted);letter-spacing:0.05em;">v3</span></div>
     <div style="display:flex;align-items:center;gap:14px;">
       <div class="header-date" id="headerDate"></div>
       <button class="btn-logout" onclick="doSignOut()">登出</button>
@@ -899,8 +899,8 @@
       <!-- Schema hint -->
       <div style="background:white;border:1px dashed #c4b5fd;border-radius:8px;padding:12px 14px;margin-bottom:12px;">
         <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--muted);margin-bottom:6px;letter-spacing:0.08em;">格式（每行一檔，/ 分隔）</div>
-        <pre id="importTemplate" style="font-family:var(--font-mono);font-size:0.73rem;color:var(--text);line-height:1.8;margin:0;white-space:pre-wrap;">股票代號/股票名稱/持股數量/現值 (NTD)/預估損益/預估報酬率
-0050/元大台灣50/17,000/1,135,403/+51,517/+4.75%</pre>
+        <pre id="importTemplate" style="font-family:var(--font-mono);font-size:0.73rem;color:var(--text);line-height:1.8;margin:0;white-space:pre-wrap;">股票代號/股票名稱/持股數量/現值 (NTD)/成本 (NTD)/預估損益/預估報酬率
+0050/元大台灣50/17,000/1,135,403/1,083,886/+51,517/+4.75%</pre>
         <button onclick="copyImportTemplate()" style="margin-top:8px;padding:5px 12px;background:transparent;border:1px solid #c4b5fd;border-radius:6px;font-family:var(--font-mono);font-size:0.68rem;color:var(--accent2);cursor:pointer;">📋 複製格式</button>
       </div>
 
@@ -936,9 +936,15 @@
           <label class="form-label">持股數量（股）</label>
           <input type="number" class="form-input" id="hShares" placeholder="例：88000" min="0" />
         </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;margin-bottom:12px;">
         <div class="form-group" style="margin-bottom:0;">
           <label class="form-label">現值 (NT$)</label>
           <input type="number" class="form-input" id="hValue" placeholder="例：3326287" />
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="form-label">成本 (NT$)</label>
+          <input type="number" class="form-input" id="hCost" placeholder="例：2976017（選填）" />
         </div>
         <div class="form-group" style="margin-bottom:0;">
           <label class="form-label">損益 (NT$)</label>
@@ -1705,13 +1711,18 @@
     const parts = line.split('/');
     if (parts.length < 4) return null;
     const clean = s => parseFloat(s.replace(/[,+%\s$NTDntd]/g, ''));
+    // 支援新格式（含成本）和舊格式（無成本）
+    // 新: 代號/名稱/股數/現值/成本/損益/報酬率
+    // 舊: 代號/名稱/股數/現值/損益/報酬率
+    const hasCost = parts.length >= 7;
     return {
       code:   parts[0].trim(),
       name:   parts[1].trim(),
       shares: clean(parts[2]) || 0,
       value:  clean(parts[3]) || 0,
-      pnl:    parts[4] != null ? clean(parts[4]) : 0,
-      pct:    parts[5] != null ? clean(parts[5]) : 0,
+      cost:   hasCost ? (clean(parts[4]) || 0) : 0,
+      pnl:    hasCost ? (parts[5] != null ? clean(parts[5]) : 0) : (parts[4] != null ? clean(parts[4]) : 0),
+      pct:    hasCost ? (parts[6] != null ? clean(parts[6]) : 0) : (parts[5] != null ? clean(parts[5]) : 0),
     };
   }
 
@@ -1755,7 +1766,7 @@
   }
 
   function clearHoldingForm() {
-    ['hCode','hName','hShares','hValue','hPnl','hPct'].forEach(id => {
+    ['hCode','hName','hShares','hValue','hCost','hPnl','hPct'].forEach(id => {
       document.getElementById(id).value = '';
     });
   }
@@ -1766,6 +1777,7 @@
     document.getElementById('hName').value   = s.name || '';
     document.getElementById('hShares').value = s.shares || '';
     document.getElementById('hValue').value  = s.value || '';
+    document.getElementById('hCost').value   = s.cost || '';
     document.getElementById('hPnl').value    = s.pnl != null ? s.pnl : '';
     document.getElementById('hPct').value    = s.pct != null ? s.pct : '';
     editingHoldingIdx = idx;
@@ -1789,6 +1801,7 @@
     const name   = document.getElementById('hName').value.trim();
     const shares = parseFloat(document.getElementById('hShares').value) || 0;
     const value  = parseFloat(document.getElementById('hValue').value);
+    const cost   = parseFloat(document.getElementById('hCost').value);
     const pnl    = parseFloat(document.getElementById('hPnl').value);
     const pct    = parseFloat(document.getElementById('hPct').value);
 
@@ -1799,6 +1812,7 @@
     const row = {
       code, name, shares,
       value,
+      ...((!isNaN(cost) && cost > 0) ? { cost } : {}),
       pnl:  isNaN(pnl) ? 0 : pnl,
       pct:  isNaN(pct) ? 0 : pct
     };
