@@ -1,8 +1,9 @@
 """
 每日個股現值更新腳本
 - 從台灣證交所抓當日收盤價
-- 計算現值（扣手續費 0.1425% + 證交稅 ETF 0.1%）、損益、報酬率
+- 計算現值、損益、報酬率
 - 寫入 Firebase Realtime Database
+- 寫入操作日誌 logs/
 """
 
 import os
@@ -153,6 +154,7 @@ def main():
             "pct":   pct_str,
         })
 
+    # ── 寫回 Firebase ──────────────────────────────────
     holdings_ref.update({
         "stocks": updated,
         "date":   TODAY,
@@ -161,6 +163,28 @@ def main():
 
     total_value = sum(s.get("value", 0) for s in updated if isinstance(s.get("value"), (int, float)))
     print(f"\n✅ 更新完成！總現值：NT$ {total_value:,}")
+
+    # ── 寫 log 到 Firebase logs/（與 HTML app 格式一致）──
+    try:
+        logs_ref = db.reference("logs")
+        existing_logs = logs_ref.get()
+        if existing_logs is None:
+            logs = []
+        elif isinstance(existing_logs, list):
+            logs = existing_logs
+        else:
+            logs = list(existing_logs.values())
+
+        new_entry = {
+            "time": datetime.now(TW_TZ).isoformat(),
+            "type": "add",
+            "msg": f"🤖 自動更新 {len(updated)} 檔個股｜總現值 NT$ {total_value:,}",
+        }
+        logs.insert(0, new_entry)
+        logs_ref.set(logs[:200])  # 最多保留 200 筆
+        print("📝 已寫入操作日誌")
+    except Exception as e:
+        print(f"⚠️  寫入日誌失敗: {e}")
 
 
 if __name__ == "__main__":
