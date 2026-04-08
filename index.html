@@ -1488,8 +1488,8 @@
       if (d.value > peak) {
         // new high reached
         if (inUW) {
-          // close the underwater period
-          periods.push({ start: uwStartIdx, end: i });
+          // close the underwater period (end at previous point, not the new high)
+          periods.push({ start: uwStartIdx, end: i - 1 });
           const months = (parseDate(d.label) - parseDate(data[uwStartIdx].label)) / (1000*60*60*24*30.4);
           if (months > maxUW) maxUW = months;
           inUW = false;
