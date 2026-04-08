@@ -1651,6 +1651,26 @@
     ddGrad.addColorStop(0,'rgba(220,38,38,0.15)');
     ddGrad.addColorStop(1,'rgba(220,38,38,0)');
 
+    // 計算套牢期間的時間長度標示文字（依視圖模式）
+    function uwDurationLabel(startLabel, endLabel) {
+      const s = parseDate(startLabel);
+      const e = endLabel ? parseDate(endLabel) : new Date();
+      const days = (e - s) / (1000 * 60 * 60 * 24);
+      if (currentView === 'D') {
+        if (days < 31)  return Math.round(days) + ' 天';
+        if (days < 365) return (days / 30.4).toFixed(1) + ' 個月';
+        return (days / 365).toFixed(1) + ' 年';
+      } else if (currentView === 'M') {
+        const months = days / 30.4;
+        if (months < 12) return months.toFixed(1) + ' 個月';
+        return (months / 12).toFixed(1) + ' 年';
+      } else {
+        const years = days / 365;
+        if (years < 1) return Math.round(days / 30.4) + ' 個月';
+        return years.toFixed(1) + ' 年';
+      }
+    }
+
     // Underwater shading plugin
     const underwaterPlugin = {
       id: 'underwaterShading',
@@ -1662,9 +1682,10 @@
         periods.forEach(({ start, end }) => {
           const x1 = scales.x.getPixelForValue(start);
           const x2 = scales.x.getPixelForValue(end);
+          const width = x2 - x1;
           ctx.fillStyle = 'rgba(251,191,36,0.10)';
-          ctx.fillRect(x1, chartArea.top, x2 - x1, chartArea.height);
-          // top border line
+          ctx.fillRect(x1, chartArea.top, width, chartArea.height);
+          // 左邊框虛線
           ctx.strokeStyle = 'rgba(217,119,6,0.25)';
           ctx.lineWidth = 1;
           ctx.setLineDash([4, 3]);
@@ -1673,6 +1694,30 @@
           ctx.lineTo(x1, chartArea.bottom);
           ctx.stroke();
           ctx.setLineDash([]);
+          // 套牢時間標示（寬度夠才顯示）
+          if (width > 24) {
+            const startLbl = data[start]?.label;
+            const endLbl   = data[end]?.label;
+            const label    = uwDurationLabel(startLbl, endLbl);
+            const cx       = x1 + width / 2;
+            const ty       = chartArea.top + 14;
+            ctx.font = '10px "Space Mono", monospace';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            // 背景框
+            const tw = ctx.measureText(label).width + 10;
+            ctx.fillStyle = 'rgba(255,255,255,0.82)';
+            ctx.beginPath();
+            if (ctx.roundRect) {
+              ctx.roundRect(cx - tw/2, ty - 8, tw, 16, 4);
+            } else {
+              ctx.rect(cx - tw/2, ty - 8, tw, 16);
+            }
+            ctx.fill();
+            // 文字
+            ctx.fillStyle = 'rgba(180,100,0,0.9)';
+            ctx.fillText(label, cx, ty);
+          }
         });
         ctx.restore();
       }
