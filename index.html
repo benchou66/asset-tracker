@@ -1012,7 +1012,7 @@
       <button class="chart-tab" onclick="switchChart('pie')">個股佔比</button>
       <button class="chart-tab" onclick="switchChart('bondstock')">股債占比</button>
       <button class="chart-tab" onclick="switchChart('vsindex')">vs 加權指數</button>
-      <button class="chart-tab" onclick="switchChart('annual')">年化報酬率</button>
+      <button class="chart-tab" onclick="switchChart('annual')">今年報酬率</button>
       <button class="chart-tab" onclick="switchChart('attainment')">里程碑達成率</button>
       <button class="chart-tab" onclick="switchChart('trajectory')">預期資產軌跡</button>
       <button class="chart-tab" onclick="switchChart('ratesolve')">剩餘所需報酬率</button>
@@ -2481,15 +2481,13 @@
       if (e.date === base.date) {
         labels.push(e.date);
         data.push(0);
-        tooltipInfo.push({ base, current: e, cagr: 0, years: 0 });
+        tooltipInfo.push({ base, current: e, ret: 0 });
         return;
       }
-      const years = (new Date(e.date) - new Date(base.date)) / (365.25 * 86400000);
-      if (years < 0.01) return;
-      const cagr = (Math.pow(e.amount / base.amount, 1 / years) - 1) * 100;
+      const ret = (e.amount - base.amount) / base.amount * 100;
       labels.push(e.date);
-      data.push(parseFloat(cagr.toFixed(2)));
-      tooltipInfo.push({ base, current: e, cagr, years });
+      data.push(parseFloat(ret.toFixed(2)));
+      tooltipInfo.push({ base, current: e, ret });
     });
 
     if (!labels.length) {
@@ -2507,7 +2505,7 @@
       data: {
         labels,
         datasets: [{
-          label: '年化報酬率 (CAGR, 當年基準) %',
+          label: '今年報酬率 (vs 年初第一筆) %',
           data,
           borderColor: '#7c3aed',
           backgroundColor: 'rgba(124,58,237,0.07)',
@@ -2526,14 +2524,14 @@
         plugins: {
           legend: { labels: { font: { family: 'Space Mono', size: 11 }, color: '#64748b', boxWidth: 14 } },
           tooltip: { callbacks: {
-            label: ctx => ` CAGR：${ctx.raw >= 0 ? '+' : ''}${ctx.raw}%`,
+            label: ctx => ` 報酬率：${ctx.raw >= 0 ? '+' : ''}${ctx.raw}%`,
             afterLabel: ctx => {
               const info = tooltipInfo[ctx.dataIndex];
-              if (info.years === 0) return ` 年初基準：${fmt(info.base.amount)}`;
+              if (!info.ret) return ` 年初基準：${fmt(info.base.amount)}`;
               return [
-                ` 基準：${info.base.date}  ${fmt(info.base.amount)}`,
-                ` 現在：${info.current.date}  ${fmt(info.current.amount)}`,
-                ` 經過：${info.years.toFixed(2)} 年`
+                ` 年初：${info.base.date}  ${fmt(info.base.amount)}`,
+                ` 當筆：${info.current.date}  ${fmt(info.current.amount)}`,
+                ` 損益：${info.ret >= 0 ? '+' : ''}${fmt(info.current.amount - info.base.amount)}`
               ];
             }
           }}
