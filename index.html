@@ -2835,13 +2835,15 @@
 
     // 計算各分類在最新 holdings 的佔比
     const latestStocks = snapshots[0].stocks;
-    const totalHoldingsValue = latestStocks.reduce((s, st) => s + (parseFloat(st.value) || 0), 0);
+    // 正規化：value 可能是帶逗號字串，先清除再 parseFloat
+    const parseVal = v => parseFloat(String(v || '').replace(/[,+\s]/g, '')) || 0;
+    const totalHoldingsValue = latestStocks.reduce((s, st) => s + parseVal(st.value), 0);
 
     const catRatios = {}; // { defensive: 0.33, core: 0.45, aggressive: 0.22 }
     CATEGORIES.forEach(cat => {
       const catVal = latestStocks
         .filter(st => cat.codes.includes(st.code))
-        .reduce((s, st) => s + (parseFloat(st.value) || 0), 0);
+        .reduce((s, st) => s + parseVal(st.value), 0);
       catRatios[cat.key] = totalHoldingsValue > 0 ? catVal / totalHoldingsValue : 0;
     });
 
@@ -2849,7 +2851,7 @@
     const classifiedCodes = CATEGORIES.flatMap(c => c.codes);
     const otherVal = latestStocks
       .filter(st => !classifiedCodes.includes(st.code))
-      .reduce((s, st) => s + (parseFloat(st.value) || 0), 0);
+      .reduce((s, st) => s + parseVal(st.value), 0);
     const otherRatio = totalHoldingsValue > 0 ? otherVal / totalHoldingsValue : 0;
 
     // 以每筆 entry 的 amount × 各分類佔比 → 推算歷史市值
