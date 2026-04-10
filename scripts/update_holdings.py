@@ -3,7 +3,6 @@
 - 從台灣證交所抓當日收盤價
 - 計算現值、損益、報酬率
 - 寫入 Firebase Realtime Database
-- 寫入操作日誌 logs/
 """
 
 import os
@@ -44,7 +43,9 @@ def get_twse_close_price(stock_code: str) -> float | None:
         if data.get("stat") != "OK" or not data.get("data"):
             print(f"  ⚠️  {stock_code}: 無資料 (可能今日未開市或代號錯誤)")
             return None
+        # data[-1] 是當月最後一筆（今日）
         last_row = data["data"][-1]
+        # 欄位: 日期, 成交股數, 成交金額, 開盤, 最高, 最低, 收盤, 漲跌, 成交筆數
         close_str = last_row[6].replace(",", "")
         return float(close_str)
     except Exception as e:
@@ -55,7 +56,7 @@ def get_twse_close_price(stock_code: str) -> float | None:
 def get_otc_close_price(stock_code: str) -> float | None:
     """上櫃一般股票 openapi"""
     url = "https://www.tpex.org.tw/openapi/v1/tpex_mainboard_daily_close_quotes"
-    params = {"date": TODAY.replace("-", "/")[2:]}
+    params = {"date": TODAY.replace("-", "/")[2:]}  # YY/MM/DD
     try:
         resp = requests.get(url, params=params, timeout=10)
         rows = resp.json()
@@ -100,7 +101,9 @@ def fetch_close_price(stock_code: str) -> float | None:
 def main():
     print(f"📅 {TODAY} 開始更新個股現值...")
 
-    holdings_ref = db.reference("holdings")
+    # ── 讀取 Firebase 現有 holdings ──────────────────────
+    ref_path = f"holdings"
+    holdings_ref = db.reference(ref_path)
     holdings = holdings_ref.get()
 
     if not holdings or not holdings.get("stocks"):
@@ -122,7 +125,7 @@ def main():
             continue
 
         print(f"  📈 {code} {name} ({shares:,.0f} 股)...")
-        time.sleep(0.5)
+        time.sleep(0.5)  # 避免打太快被擋
 
         price = fetch_close_price(code)
         if price is None:
@@ -132,8 +135,9 @@ def main():
 
         gross_value = price * shares
         # 賣出時須扣：手續費 0.1425% + 證交稅(ETF) 0.1%
-        fee   = round(gross_value * (0.001425 + 0.001))
-        value = round(gross_value - fee)
+        fee_rate = 0.001425 + 0.001  # 0.2425%
+        fee      = round(gross_value * fee_rate)
+        value    = round(gross_value - fee)
 
         if cost:
             pnl     = round(value - cost)
@@ -163,6 +167,44 @@ def main():
 
     total_value = sum(s.get("value", 0) for s in updated if isinstance(s.get("value"), (int, float)))
     print(f"\n✅ 更新完成！總現值：NT$ {total_value:,}")
+
+    # ── 寫每日快照到 holdings_history/YYYY-MM-DD ──────────
+    try:
+        # 分類定義（與 HTML app 一致）
+        CATEGORIES = {
+            "defensive": ["00720B", "00713", "0056"],
+            "core":      ["006208", "00922", "00646", "0050", "00923"],
+            "aggressive":["00935"],
+        }
+        classified_codes = [c for codes in CATEGORIES.values() for c in codes]
+        cat_values = {key: 0 for key in CATEGORIES}
+        other_value = 0
+
+        for s in updated:
+            code = s.get("code", "").strip()
+            val  = s.get("value", 0) if isinstance(s.get("value"), (int, float)) else 0
+            matched = False
+            for key, codes in CATEGORIES.items():
+                if code in codes:
+                    cat_values[key] += val
+                    matched = True
+                    break
+            if not matched:
+                other_value += val
+
+        snapshot = {
+            "date":       TODAY,
+            "total":      total_value,
+            "defensive":  round(cat_values["defensive"]),
+            "core":       round(cat_values["core"]),
+            "aggressive": round(cat_values["aggressive"]),
+            "other":      round(other_value),
+        }
+        history_key = TODAY.replace("-", "_")
+        db.reference(f"holdings_history/{history_key}").set(snapshot)
+        print(f"📸 已寫入每日快照：{TODAY}")
+    except Exception as e:
+        print(f"⚠️  寫入快照失敗: {e}")
 
     # ── 寫 log 到 Firebase logs/（與 HTML app 格式一致）──
     try:
