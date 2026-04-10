@@ -2784,114 +2784,105 @@
 
 
   // ── 資產結構堆疊面積圖 ─────────────────────────────────────────
-  function renderStackedAreaChart() {
-    // 分類定義
+  async function renderStackedAreaChart() {
     const CATEGORIES = [
-      {
-        key: 'defensive',
-        label: '防禦型',
-        codes: ['00720B', '00713', '0056'],
-        color: 'rgba(37,99,235,0.75)',
-        border: '#2563eb'
-      },
-      {
-        key: 'core',
-        label: '穩健核心型',
-        codes: ['006208', '00922', '00646', '0050', '00923'],
-        color: 'rgba(5,150,105,0.75)',
-        border: '#059669'
-      },
-      {
-        key: 'aggressive',
-        label: '攻擊型',
-        codes: ['00935'],
-        color: 'rgba(220,38,38,0.75)',
-        border: '#dc2626'
-      }
+      { key: 'defensive',  label: '防禦型',     codes: ['00720B','00713','0056'],                    color: 'rgba(37,99,235,0.75)',   border: '#2563eb' },
+      { key: 'core',       label: '穩健核心型',  codes: ['006208','00922','00646','0050','00923'],    color: 'rgba(5,150,105,0.75)',   border: '#059669' },
+      { key: 'aggressive', label: '攻擊型',      codes: ['00935'],                                   color: 'rgba(220,38,38,0.75)',   border: '#dc2626' },
     ];
 
-    // 收集所有有 holdings 快照的時間點
-    // holdings 存的是最新一筆，加上 entries 的歷史
-    // 這裡用 holdings history（若有）或單點快照
-    // 先嘗試從 Firebase logs 取得歷史 holdings，若無則用目前 holdings
-    const snapshots = [];
+    const wrap = document.getElementById('chart-stackedarea');
+    const legendEl = document.getElementById('stackedLegend');
+    legendEl.innerHTML = '<span style="color:var(--muted);font-size:0.72rem;">載入歷史資料中...</span>';
 
-    // 從 entries 的日期 + 目前 holdings 組成唯一快照（單點）
-    if (holdings && holdings.stocks && holdings.stocks.length > 0) {
-      const date = holdings.date || (entries.length ? [...entries].sort((a,b)=>b.date.localeCompare(a.date))[0].date : '');
-      if (date) snapshots.push({ date, stocks: holdings.stocks });
-    }
+    // ── 從 Firebase holdings_history 讀取歷史快照 ──
+    let historySnaps = [];
+    try {
+      const raw = await window._fbGet('holdings_history');
+      if (raw) {
+        historySnaps = Object.values(raw)
+          .filter(v => v && v.date && v.total)
+          .sort((a, b) => a.date.localeCompare(b.date));
+      }
+    } catch(e) { console.warn('讀取 holdings_history 失敗', e); }
 
-    // 若只有一個快照，改為顯示「目前組成圓餅/橫條」提示
-    // 但仍繪製：以歷史 entries 日期為 x 軸，每筆 holdings 快照補插值
-    // 實際上 holdings 只有最新一筆，所以用當下資料畫單欄堆疊橫條做展示
-    // 同時以 entries 歷史資料推算各期市值比例（按持股比例縮放）
-    const sorted = [...entries].sort((a,b) => a.date.localeCompare(b.date));
-    if (sorted.length === 0 || snapshots.length === 0) {
-      document.getElementById('chart-stackedarea').innerHTML =
-        '<div class="empty">需有資產記錄與個股庫存明細才能顯示此圖</div>';
+    // ── 若歷史資料不足，fallback 到目前 holdings 推算 ──
+    if (historySnaps.length < 2) {
+      // 用最新 holdings 計算當前佔比，顯示說明
+      if (!holdings?.stocks?.length) {
+        wrap.innerHTML = '<div class="empty">需有資產記錄與個股庫存明細才能顯示此圖</div>';
+        return;
+      }
+      const parseVal = v => parseFloat(String(v||'').replace(/[,+\s]/g,'')) || 0;
+      const totalV = holdings.stocks.reduce((s, st) => s + parseVal(st.value), 0);
+      const catRatios = {};
+      CATEGORIES.forEach(cat => {
+        const cv = holdings.stocks.filter(st => cat.codes.includes(st.code)).reduce((s,st) => s + parseVal(st.value), 0);
+        catRatios[cat.key] = totalV > 0 ? cv / totalV : 0;
+      });
+      const classifiedCodes = CATEGORIES.flatMap(c => c.codes);
+      const otherVal = holdings.stocks.filter(st => !classifiedCodes.includes(st.code)).reduce((s,st) => s + parseVal(st.value), 0);
+      const otherRatio = totalV > 0 ? otherVal / totalV : 0;
+
+      // 以 entries 歷史 × 固定佔比推算（舊做法，歷史資料不足時 fallback）
+      const sorted = [...entries].sort((a,b) => a.date.localeCompare(b.date));
+      if (!sorted.length) { wrap.innerHTML = '<div class="empty">需有資產記錄才能顯示此圖</div>'; return; }
+
+      const labels = sorted.map(e => e.date);
+      const datasets = CATEGORIES.map(cat => ({
+        label: cat.label + ' (' + cat.codes.join('、') + ')',
+        data: sorted.map(e => Math.round(e.amount * catRatios[cat.key])),
+        backgroundColor: cat.color, borderColor: cat.border,
+        borderWidth: 1.5, fill: true, tension: 0.3, pointRadius: 2, pointHoverRadius: 5
+      }));
+      if (otherRatio > 0.005) datasets.push({
+        label: '其他', data: sorted.map(e => Math.round(e.amount * otherRatio)),
+        backgroundColor: 'rgba(100,116,139,0.6)', borderColor: '#64748b',
+        borderWidth: 1.5, fill: true, tension: 0.3, pointRadius: 2, pointHoverRadius: 5
+      });
+
+      legendEl.innerHTML = CATEGORIES.map(cat =>
+        `<span style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+          <span style="width:10px;height:10px;border-radius:2px;background:${cat.border};display:inline-block;flex-shrink:0;margin-top:2px;"></span>
+          <span>${cat.label}<span style="color:var(--muted);font-size:0.62rem;margin-left:3px;">(${cat.codes.join('、')})</span>
+          <strong style="margin-left:4px;">${(catRatios[cat.key]*100).toFixed(1)}%</strong></span>
+        </span>`
+      ).join('') + `<span style="color:var(--muted);font-size:0.62rem;margin-left:8px;">※ 歷史快照累積中，自動更新後比例將隨時間變化</span>`;
+
+      _drawStackedChart(wrap, labels, datasets, catRatios, CATEGORIES, otherRatio);
       return;
     }
 
-    // 計算各分類在最新 holdings 的佔比
-    const latestStocks = snapshots[0].stocks;
-    // 正規化：value 可能是帶逗號字串，先清除再 parseFloat
-    const parseVal = v => parseFloat(String(v || '').replace(/[,+\s]/g, '')) || 0;
-    const totalHoldingsValue = latestStocks.reduce((s, st) => s + parseVal(st.value), 0);
-
-    const catRatios = {}; // { defensive: 0.33, core: 0.45, aggressive: 0.22 }
-    CATEGORIES.forEach(cat => {
-      const catVal = latestStocks
-        .filter(st => cat.codes.includes(st.code))
-        .reduce((s, st) => s + parseVal(st.value), 0);
-      catRatios[cat.key] = totalHoldingsValue > 0 ? catVal / totalHoldingsValue : 0;
-    });
-
-    // 其他（未分類）
-    const classifiedCodes = CATEGORIES.flatMap(c => c.codes);
-    const otherVal = latestStocks
-      .filter(st => !classifiedCodes.includes(st.code))
-      .reduce((s, st) => s + parseVal(st.value), 0);
-    const otherRatio = totalHoldingsValue > 0 ? otherVal / totalHoldingsValue : 0;
-
-    // 以每筆 entry 的 amount × 各分類佔比 → 推算歷史市值
-    const labels = sorted.map(e => e.date);
+    // ── 有歷史快照：直接用真實數字 ──
+    const labels   = historySnaps.map(s => s.date);
     const datasets = CATEGORIES.map(cat => ({
       label: cat.label + ' (' + cat.codes.join('、') + ')',
-      data: sorted.map(e => Math.round(e.amount * catRatios[cat.key])),
-      backgroundColor: cat.color,
-      borderColor: cat.border,
-      borderWidth: 1.5,
-      fill: true,
-      tension: 0.3,
-      pointRadius: 2,
-      pointHoverRadius: 5
+      data: historySnaps.map(s => s[cat.key] || 0),
+      backgroundColor: cat.color, borderColor: cat.border,
+      borderWidth: 1.5, fill: true, tension: 0.3, pointRadius: 2, pointHoverRadius: 5
     }));
 
-    // 若有其他未分類
-    if (otherRatio > 0.005) {
-      datasets.push({
-        label: '其他',
-        data: sorted.map(e => Math.round(e.amount * otherRatio)),
-        backgroundColor: 'rgba(100,116,139,0.6)',
-        borderColor: '#64748b',
-        borderWidth: 1.5,
-        fill: true,
-        tension: 0.3,
-        pointRadius: 2,
-        pointHoverRadius: 5
-      });
-    }
+    // 其他（未分類）
+    const hasOther = historySnaps.some(s => (s.other || 0) > 0);
+    if (hasOther) datasets.push({
+      label: '其他', data: historySnaps.map(s => s.other || 0),
+      backgroundColor: 'rgba(100,116,139,0.6)', borderColor: '#64748b',
+      borderWidth: 1.5, fill: true, tension: 0.3, pointRadius: 2, pointHoverRadius: 5
+    });
 
-    // 更新 legend
-    const legendEl = document.getElementById('stackedLegend');
+    // legend 用最新一筆快照的佔比
+    const latest = historySnaps[historySnaps.length - 1];
+    const catRatios = {};
+    CATEGORIES.forEach(cat => {
+      catRatios[cat.key] = latest.total > 0 ? (latest[cat.key] || 0) / latest.total : 0;
+    });
+    const otherRatio = latest.total > 0 ? (latest.other || 0) / latest.total : 0;
+
     legendEl.innerHTML = CATEGORIES.map(cat =>
       `<span style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="width:10px;height:10px;border-radius:2px;background:${cat.border};display:inline-block;flex-shrink:0;margin-top:2px;"></span>
-        <span>
-          ${cat.label}<span style="color:var(--muted);font-size:0.62rem;margin-left:3px;">(${cat.codes.join('、')})</span>
-          <strong style="margin-left:4px;">${(catRatios[cat.key]*100).toFixed(1)}%</strong>
-        </span>
+        <span>${cat.label}<span style="color:var(--muted);font-size:0.62rem;margin-left:3px;">(${cat.codes.join('、')})</span>
+        <strong style="margin-left:4px;">${(catRatios[cat.key]*100).toFixed(1)}%</strong></span>
       </span>`
     ).join('') + (otherRatio > 0.005 ?
       `<span style="display:flex;align-items:center;gap:4px;">
@@ -2899,11 +2890,14 @@
         其他 <strong>${(otherRatio*100).toFixed(1)}%</strong>
       </span>` : '');
 
-    const wrap = document.getElementById('chart-stackedarea');
+    _drawStackedChart(wrap, labels, datasets, catRatios, CATEGORIES, otherRatio);
+  }
+
+  function _drawStackedChart(wrap, labels, datasets, catRatios, CATEGORIES, otherRatio) {
+    if (chartInstances.stackedarea) { chartInstances.stackedarea.destroy(); delete chartInstances.stackedarea; }
     if (!wrap.querySelector('canvas')) {
       wrap.innerHTML += '<div class="chart-wrap" style="height:300px;"><canvas id="stackedAreaChart"></canvas></div>';
     }
-
     chartInstances.stackedarea = new Chart(document.getElementById('stackedAreaChart'), {
       type: 'line',
       data: { labels, datasets },
@@ -2915,32 +2909,18 @@
           tooltip: {
             callbacks: {
               label: ctx => {
-                const ratio = CATEGORIES[ctx.datasetIndex]
-                  ? (catRatios[CATEGORIES[ctx.datasetIndex]?.key] * 100).toFixed(1)
-                  : (otherRatio * 100).toFixed(1);
+                const total = ctx.chart.data.datasets.reduce((s, ds) => s + (ds.data[ctx.dataIndex] || 0), 0);
+                const ratio = total > 0 ? (ctx.raw / total * 100).toFixed(1) : '0.0';
                 return ` ${ctx.dataset.label.split(' (')[0]}：NT$ ${ctx.raw.toLocaleString()} (${ratio}%)`;
               },
-              footer: items => {
-                const total = items.reduce((s, i) => s + i.raw, 0);
-                return '合計：NT$ ' + total.toLocaleString();
-              }
+              footer: items => '合計：NT$ ' + items.reduce((s,i) => s + i.raw, 0).toLocaleString()
             }
           }
         },
         scales: {
-          x: {
-            grid: { display: false },
-            stacked: true,
-            ticks: { font: { family: 'Space Mono', size: 10 }, color: '#64748b', maxTicksLimit: 10 }
-          },
-          y: {
-            stacked: true,
-            grid: { color: '#dde3ec' },
-            ticks: {
-              font: { family: 'Space Mono', size: 10 }, color: '#64748b',
-              callback: v => v >= 1000000 ? (v/1000000).toFixed(1)+'M' : v.toLocaleString()
-            }
-          }
+          x: { grid:{display:false}, stacked:true, ticks:{font:{family:'Space Mono',size:10},color:'#64748b',maxTicksLimit:10} },
+          y: { stacked:true, grid:{color:'#dde3ec'}, ticks:{font:{family:'Space Mono',size:10},color:'#64748b',
+               callback: v => v >= 1000000 ? (v/1000000).toFixed(1)+'M' : v.toLocaleString()} }
         }
       }
     });
