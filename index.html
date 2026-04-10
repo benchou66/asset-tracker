@@ -2637,18 +2637,19 @@
     const PV = baseEntry.amount;
     const baseDate = new Date(baseEntry.date);
 
-    // 計算每筆實際資產的預期軌跡值
-    // 軌跡只顯示從 baseEntry 開始往後推 20 年，每年一個點
-    const maxYears = 20;
+    // 計算每筆實際資產的預期軌跡值（逐年迭代，股息隨資產成長）
+    const maxYears = 30;
     const trajLabels = [], trajData = [];
+    let fv = PV;
     for (let n = 0; n <= maxYears; n++) {
       const yr = baseDate.getFullYear() + n;
       trajLabels.push(String(yr));
-      // 簡單估算：每年股息約為市值的 2%
-      const avgPMT = PMT_BASE + PV * 0.02;
-      const fv = PV * Math.pow(1 + r, n) + (n === 0 ? 0 : avgPMT * ((Math.pow(1 + r, n) - 1) / r));
       trajData.push(Math.round(fv));
       if (fv >= TARGET * 1.05) break;
+      // 每年：先成長，再加 PMT（定期定額） + 股息（當年資產的 2%）
+      const dividend = fv * 0.02;
+      const pmt = PMT_BASE + dividend;
+      fv = fv * (1 + r) + pmt;
     }
 
     // 實際資產：每年最後一筆，從 baseEntry 開始
