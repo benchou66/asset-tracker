@@ -1141,7 +1141,7 @@
           <div id="costEmpty" class="empty" style="display:none;">尚無總付出成本資料，新增資產記錄時填入「總付出成本」即可開始累積</div>
           <div id="costChartWrap" class="chart-wrap" style="height:300px;"><canvas id="costChart"></canvas></div>
           <div style="font-family:var(--font-mono);font-size:0.62rem;color:var(--muted);margin-top:8px;text-align:center;">
-            ※ 變動點標註：變動日期／增減金額／變動後成本（紅＝增加投入、綠＝成本減少）
+            ※ 僅變動點顯示圓點與金額標籤（紅＝增加投入、綠＝成本減少）；滑鼠移到圓點可看日期與變動後成本，完整明細見下方清單
           </div>
           <hr class="divider">
           <div style="font-family:var(--font-mono);font-size:0.68rem;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:10px;">💰 成本變動歷史</div>
@@ -3031,63 +3031,57 @@
       diff: i === 0 ? null : p.cost - series[i-1].cost
     }));
 
-    // 變動標註 plugin：於變動點畫出「變動日期／增減金額／變動後的值」
+    // 變動標註 plugin：變動點上方畫單行金額標籤，自動分層排列避免重疊
+    // （日期與變動後成本改由 tooltip 與下方歷史清單呈現）
     const costLabelPlugin = {
       id: 'costChangeLabels',
       afterDatasetsDraw(c) {
         const { ctx, chartArea, scales } = c;
         if (!chartArea) return;
         ctx.save();
-        let flip = true;
+        ctx.font = 'bold 9px "Space Mono", monospace';
+        const laneH = 16, pillH = 13, padX = 5, gap = 6;
+        const lanes = [];   // 每一層目前占用到的最右邊 x
+        const placed = [];  // 先算好位置，再分兩趟畫（避免連接線壓到別的標籤）
         changes.forEach((pt, i) => {
-          if (pt.diff == null || pt.diff === 0) return;
+          if (!pt.diff) return; // 首筆或無變動 → 不標註
           const x = scales.x.getPixelForValue(i);
           const y = scales.y.getPixelForValue(pt.cost);
           const inc = pt.diff > 0;
-          const color = inc ? '#dc2626' : '#059669';
-          const lines = [
-            pt.date,
-            (inc ? '+' : '−') + Math.abs(pt.diff).toLocaleString('zh-TW'),
-            '→ ' + pt.cost.toLocaleString('zh-TW'),
-          ];
-          ctx.font = '9px "Space Mono", monospace';
-          const w = Math.max(...lines.map(t => ctx.measureText(t).width)) + 14;
-          const h = 42;
-          flip = !flip;
-          let by = flip ? y - h - 12 : y + 12;
-          if (by < chartArea.top + 2) by = y + 12;
-          if (by + h > chartArea.bottom - 2) by = y - h - 12;
-          const bx = Math.min(Math.max(x - w/2, chartArea.left + 2), chartArea.right - w - 2);
-
-          // 連接虛線
-          ctx.strokeStyle = color;
+          const text = (inc ? '+' : '−') + Math.abs(pt.diff).toLocaleString('zh-TW');
+          const w = ctx.measureText(text).width + padX * 2;
+          const bx = Math.min(Math.max(x - w/2, chartArea.left), chartArea.right - w);
+          let lane = 0;
+          while (lane < lanes.length && bx < lanes[lane] + gap) lane++;
+          lanes[lane] = bx + w;
+          const by = chartArea.top + 4 + lane * laneH;
+          placed.push({ x, y, bx, by, w, text, inc });
+        });
+        // 第一趟：連接虛線
+        placed.forEach(p => {
+          ctx.strokeStyle = p.inc ? 'rgba(220,38,38,0.3)' : 'rgba(5,150,105,0.3)';
           ctx.lineWidth = 1;
           ctx.setLineDash([2,2]);
           ctx.beginPath();
-          ctx.moveTo(x, y);
-          ctx.lineTo(x, by < y ? by + h : by);
+          ctx.moveTo(p.x, p.by + pillH);
+          ctx.lineTo(p.x, p.y - 5);
           ctx.stroke();
-          ctx.setLineDash([]);
-
-          // 標註框
-          ctx.fillStyle = 'rgba(255,255,255,0.92)';
+        });
+        ctx.setLineDash([]);
+        // 第二趟：標籤
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        placed.forEach(p => {
+          const color = p.inc ? '#dc2626' : '#059669';
+          ctx.fillStyle = 'rgba(255,255,255,0.95)';
+          ctx.strokeStyle = color;
+          ctx.lineWidth = 1;
           ctx.beginPath();
-          if (ctx.roundRect) ctx.roundRect(bx, by, w, h, 5); else ctx.rect(bx, by, w, h);
+          if (ctx.roundRect) ctx.roundRect(p.bx, p.by, p.w, pillH, 4); else ctx.rect(p.bx, p.by, p.w, pillH);
           ctx.fill();
           ctx.stroke();
-
-          // 文字：日期（灰）、變動值（紅/綠）、變動後的值（深）
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          const cx = bx + w/2;
-          ctx.fillStyle = '#64748b';
-          ctx.fillText(lines[0], cx, by + 8);
-          ctx.font = 'bold 10px "Space Mono", monospace';
           ctx.fillStyle = color;
-          ctx.fillText(lines[1], cx, by + 21);
-          ctx.font = '9px "Space Mono", monospace';
-          ctx.fillStyle = '#1e293b';
-          ctx.fillText(lines[2], cx, by + 34);
+          ctx.fillText(p.text, p.bx + p.w/2, p.by + pillH/2 + 0.5);
         });
         ctx.restore();
       }
@@ -3105,14 +3099,15 @@
           borderWidth: 2,
           stepped: true,
           fill: true,
-          pointRadius: ctx => (changes[ctx.dataIndex]?.diff ? 5 : 3),
+          pointRadius: ctx => (changes[ctx.dataIndex]?.diff ? 4 : 0),
           pointBackgroundColor: '#fff',
           pointBorderColor: ctx => {
             const d = changes[ctx.dataIndex]?.diff;
             return d ? (d > 0 ? '#dc2626' : '#059669') : '#0891b2';
           },
           pointBorderWidth: 2,
-          pointHoverRadius: 7,
+          pointHoverRadius: ctx => (changes[ctx.dataIndex]?.diff ? 7 : 4),
+          pointHitRadius: 6,
         }]
       },
       plugins: [costLabelPlugin],
@@ -3141,13 +3136,13 @@
       }
     });
 
-    // ── 成本變動歷史清單（新到舊，完整保留每筆成本記錄） ──
-    listEl.innerHTML = [...changes].reverse().map(c => {
+    // ── 成本變動歷史清單（新到舊；只列首筆與有變動的記錄，無變動的日常記錄不重複顯示） ──
+    const changedOnly = changes.filter(c => c.diff == null || c.diff !== 0);
+    listEl.innerHTML = [...changedOnly].reverse().map(c => {
       const isUp   = c.diff != null && c.diff > 0;
       const isDown = c.diff != null && c.diff < 0;
       const cls  = isUp ? 'up' : isDown ? 'down' : 'neutral';
       const desc = c.diff == null ? '首筆成本記錄'
-                 : c.diff === 0  ? '─ 無變動'
                  : isUp ? `▲ 投入增加 +${c.diff.toLocaleString('zh-TW')}`
                         : `▼ 成本減少 −${Math.abs(c.diff).toLocaleString('zh-TW')}`;
       return `<div class="history-item">
@@ -3159,7 +3154,7 @@
           <div class="history-amount ${cls}">NT$ ${c.cost.toLocaleString('zh-TW')}</div>
         </div>
       </div>`;
-    }).join('');
+    }).join('') || '<div class="empty">尚無成本變動</div>';
   }
 
 </script>
