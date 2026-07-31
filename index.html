@@ -123,6 +123,7 @@
   }
   .card-value.green { color: var(--green); }
   .card-value.red { color: var(--red); }
+  .card-value.amber { color: var(--amber); }
   .card-sub {
     font-size: 0.75rem;
     color: var(--muted);
@@ -328,6 +329,9 @@
     font-weight: 700;
     color: var(--text);
   }
+  .stat-box-value.green { color: var(--green); }
+  .stat-box-value.red { color: var(--red); }
+  .stat-box-value.amber { color: var(--amber); }
 
   /* underwater badge */
   .underwater-badge {
@@ -756,7 +760,7 @@
 <div id="appWrapper">
 <div class="wrapper">
   <header>
-    <div class="logo">ASSET<span>/</span>TRACKER <span style="font-size:0.6rem;color:var(--muted);letter-spacing:0.05em;">v4</span></div>
+    <div class="logo">ASSET<span>/</span>TRACKER <span style="font-size:0.6rem;color:var(--muted);letter-spacing:0.05em;">v4.2</span></div>
     <div style="display:flex;align-items:center;gap:14px;">
       <div class="header-date" id="headerDate"></div>
       <button class="btn-logout" onclick="doSignOut()">登出</button>
@@ -1017,6 +1021,7 @@
       <button class="chart-tab" onclick="switchChart('trajectory')">預期資產軌跡</button>
       <button class="chart-tab" onclick="switchChart('ratesolve')">剩餘所需報酬率</button>
       <button class="chart-tab" onclick="switchChart('stackedarea')">資產結構</button>
+      <button class="chart-tab" onclick="switchChart('cost')">總付出成本</button>
     </div>
 
     <!-- Chart Panels -->
@@ -1127,8 +1132,20 @@
           </div>
           <div class="chart-wrap" style="height:300px;"><canvas id="stackedAreaChart"></canvas></div>
           <div style="font-family:var(--font-mono);font-size:0.62rem;color:var(--muted);margin-top:8px;text-align:center;">
-            ※ 市值來源為 個股庫存明細，每次更新後反映最新數據
+            ※ 市值來源為 個股庫存明細，每次更新後自動寫入歷史快照
           </div>
+        </div>
+
+        <!-- Cost Change -->
+        <div id="chart-cost" class="analytics-panel" style="display:none;">
+          <div id="costEmpty" class="empty" style="display:none;">尚無總付出成本資料，新增資產記錄時填入「總付出成本」即可開始累積</div>
+          <div id="costChartWrap" class="chart-wrap" style="height:300px;"><canvas id="costChart"></canvas></div>
+          <div style="font-family:var(--font-mono);font-size:0.62rem;color:var(--muted);margin-top:8px;text-align:center;">
+            ※ 變動點標註：變動日期／增減金額／變動後成本（紅＝增加投入、綠＝成本減少）
+          </div>
+          <hr class="divider">
+          <div style="font-family:var(--font-mono);font-size:0.68rem;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:10px;">💰 成本變動歷史</div>
+          <div class="scroll-list"><div class="history-list" id="costHistoryList"></div></div>
         </div>
 
       </div>
@@ -1188,6 +1205,13 @@
     ]
   };
 
+  // ─── 資產分類定義（快照寫入與堆疊圖共用同一份） ───
+  const ASSET_CATEGORIES = [
+    { key: 'defensive',  label: '防禦型',     codes: ['00720B','00713','0056'],                 color: 'rgba(37,99,235,0.75)',  border: '#2563eb' },
+    { key: 'core',       label: '穩健核心型', codes: ['006208','00922','00646','0050','00923'], color: 'rgba(5,150,105,0.75)',  border: '#059669' },
+    { key: 'aggressive', label: '攻擊型',     codes: ['00935'],                                 color: 'rgba(220,38,38,0.75)',  border: '#dc2626' },
+  ];
+
   let entries = [];
   let holdings = INIT_HOLDINGS;
   let currentView = 'D';
@@ -1199,6 +1223,7 @@
       const obj = {};
       entries.forEach(e => { obj[e.date.replace(/-/g, '_')] = e; });
       await window._fbSet('entries', obj);
+      await window._fbSet('meta/entriesInitialized', true);
     } catch(e) { console.warn('FB save entries:', e); }
   }
   async function dbDeleteEntry(date) {
@@ -1213,18 +1238,60 @@
       await dbSaveEntries();
     }
   }
+
+  // ── 個股快照：把當前 holdings 依分類彙總成一筆歷史紀錄 ──
+  function buildHoldingsSnapshot(h) {
+    if (!h || !Array.isArray(h.stocks) || !h.stocks.length) return null;
+    const parseVal = v => {
+      const n = parseFloat(String(v ?? '').replace(/[,+%\s$]/g, ''));
+      return isNaN(n) ? 0 : n;
+    };
+    const snap = { date: h.date || new Date().toISOString().slice(0,10),
+                   total: 0, defensive: 0, core: 0, aggressive: 0, other: 0 };
+    h.stocks.forEach(st => {
+      const v = parseVal(st.value);
+      snap.total += v;
+      const cat = ASSET_CATEGORIES.find(c => c.codes.includes(st.code));
+      if (cat) snap[cat.key] += v; else snap.other += v;
+    });
+    ['total','defensive','core','aggressive','other'].forEach(k => { snap[k] = Math.round(snap[k]); });
+    return snap;
+  }
+
+  async function dbSaveHoldingsSnapshot() {
+    const snap = buildHoldingsSnapshot(holdings);
+    if (!snap || snap.total <= 0) return;
+    try {
+      await window._fbSet('holdings_history/' + snap.date.replace(/-/g, '_'), snap);
+    } catch(e) { console.warn('FB save holdings_history:', e); }
+  }
+
   async function dbSaveHoldings() {
     try { await window._fbSet('holdings', holdings); }
     catch(e) { console.warn('FB save holdings:', e); }
+    // 每次個股異動都同步寫一筆當日快照 → 堆疊面積圖才有真實歷史
+    await dbSaveHoldingsSnapshot();
   }
+
   async function dbLoadAll() {
     try {
-      const e = await window._fbGet('entries');
-      if (e === null) {
-        entries = REAL_DATA;
+      // 舊版遺留的 __cleared 旗標：一次性清掉
+      const legacy = await window._fbGet('entries/__cleared');
+      if (legacy !== null) {
+        await window._fbRemove('entries/__cleared');
+        await window._fbSet('meta/entriesInitialized', true);
+      }
+
+      const e    = await window._fbGet('entries');
+      const init = await window._fbGet('meta/entriesInitialized');
+      const vals = e ? Object.values(e).filter(v => v && typeof v === 'object' && v.date) : [];
+
+      if (!vals.length && !init) {
+        // 真正的第一次使用 → 灌入範例資料
+        entries = REAL_DATA.slice();
         await dbSaveEntries();
       } else {
-        const vals = Object.values(e).filter(v => typeof v === 'object' && v.date);
+        // 已初始化過（含使用者主動清空）→ 尊重現況，不回填範例
         entries = vals.sort((a,b) => a.date.localeCompare(b.date));
       }
     } catch { entries = []; }
@@ -1266,6 +1333,8 @@
         document.getElementById('appWrapper').style.display = 'block';
         showToast('⏳ 載入資料中...');
         await dbLoadAll();
+        // 登入時補寫一筆當日快照（若當天已有會直接覆蓋，不會重複）
+        await dbSaveHoldingsSnapshot();
         render();
         renderHoldings();
         renderLog();
@@ -1411,7 +1480,7 @@
     try {
       const fresh = await window._fbGet('entries');
       if (fresh) {
-        const vals = Object.values(fresh).filter(v => typeof v === 'object' && v.date);
+        const vals = Object.values(fresh).filter(v => v && typeof v === 'object' && v.date);
         entries = vals.sort((a,b) => a.date.localeCompare(b.date));
       }
     } catch {}
@@ -1426,9 +1495,12 @@
   async function clearAll() {
     if (!confirm('確定要清除所有資料？此動作無法復原。')) return;
     entries = [];
-    await window._fbSet('entries', { __cleared: true });
+    // 真正刪除節點，不留 __cleared 殘留；改用 meta 旗標避免範例資料回填
+    await window._fbRemove('entries');
+    await window._fbSet('meta/entriesInitialized', true);
     render();
     renderAnalytics();
+    addLog('del', '清除所有資產記錄');
     showToast('已清除所有資料');
   }
 
@@ -1602,8 +1674,12 @@
     document.getElementById('maxUnderwater').textContent = maxUW > 0 ? (Math.round(maxUW*10)/10) + ' 個月' : '—';
 
     // ── 成本卡：從最新一筆 entry 取 cost / pnl / returnRate ──
-    const latestEntry = [...entries].sort((a,b) => a.date.localeCompare(b.date)).pop();
-    const eCost   = latestEntry?.cost;
+    const sortedEntries = [...entries].sort((a,b) => a.date.localeCompare(b.date));
+    const latestEntry = sortedEntries[sortedEntries.length - 1];
+    // 最新一筆沒填成本時，往前回溯最近一筆有成本的記錄
+    const parseCost = v => { const n = parseFloat(String(v ?? '').replace(/[,\s]/g, '')); return isNaN(n) ? 0 : n; };
+    const latestCostEntry = [...sortedEntries].reverse().find(e => parseCost(e.cost) > 0);
+    const eCost   = latestCostEntry ? parseCost(latestCostEntry.cost) : null;
     const ePnl    = latestEntry?.pnl;
     const eReturn = latestEntry?.returnRate;
     const costEl   = document.getElementById('totalCostValue');
@@ -2228,6 +2304,7 @@
       case 'trajectory': renderTrajectoryChart(); break;
       case 'ratesolve':  calcRateSolve(); break;
       case 'stackedarea': renderStackedAreaChart(); break;
+      case 'cost':       renderCostChart(); break;
     }
   }
 
@@ -2785,11 +2862,7 @@
 
   // ── 資產結構堆疊面積圖 ─────────────────────────────────────────
   async function renderStackedAreaChart() {
-    const CATEGORIES = [
-      { key: 'defensive',  label: '防禦型',     codes: ['00720B','00713','0056'],                    color: 'rgba(37,99,235,0.75)',   border: '#2563eb' },
-      { key: 'core',       label: '穩健核心型',  codes: ['006208','00922','00646','0050','00923'],    color: 'rgba(5,150,105,0.75)',   border: '#059669' },
-      { key: 'aggressive', label: '攻擊型',      codes: ['00935'],                                   color: 'rgba(220,38,38,0.75)',   border: '#dc2626' },
-    ];
+    const CATEGORIES = ASSET_CATEGORIES;
 
     const wrap = document.getElementById('chart-stackedarea');
     const legendEl = document.getElementById('stackedLegend');
@@ -2847,7 +2920,7 @@
           <span>${cat.label}<span style="color:var(--muted);font-size:0.62rem;margin-left:3px;">(${cat.codes.join('、')})</span>
           <strong style="margin-left:4px;">${(catRatios[cat.key]*100).toFixed(1)}%</strong></span>
         </span>`
-      ).join('') + `<span style="color:var(--muted);font-size:0.62rem;margin-left:8px;">※ 歷史快照累積中，自動更新後比例將隨時間變化</span>`;
+      ).join('') + `<span style="color:var(--muted);font-size:0.62rem;margin-left:8px;">※ 歷史快照累積中（目前 ${historySnaps.length} 筆），滿 2 筆後將改用真實歷史</span>`;
 
       _drawStackedChart(wrap, labels, datasets, catRatios, CATEGORIES, otherRatio);
       return;
@@ -2924,6 +2997,169 @@
         }
       }
     });
+  }
+
+  // ── 總付出成本變動圖 ─────────────────────────────────────────────
+  function getCostSeries() {
+    const parseN = v => { const n = parseFloat(String(v ?? '').replace(/[,\s]/g, '')); return isNaN(n) ? 0 : n; };
+    return [...entries]
+      .map(e => ({ date: e.date, cost: Math.round(parseN(e.cost)) }))
+      .filter(p => p.cost > 0)
+      .sort((a,b) => a.date.localeCompare(b.date));
+  }
+
+  function renderCostChart() {
+    const listEl  = document.getElementById('costHistoryList');
+    const emptyEl = document.getElementById('costEmpty');
+    const wrapEl  = document.getElementById('costChartWrap');
+    const series  = getCostSeries();
+
+    if (chartInstances.cost) { chartInstances.cost.destroy(); delete chartInstances.cost; }
+
+    if (!series.length) {
+      wrapEl.style.display = 'none';
+      emptyEl.style.display = 'block';
+      listEl.innerHTML = '<div class="empty">尚無成本資料，新增記錄時填入「總付出成本」即可累積歷史</div>';
+      return;
+    }
+    wrapEl.style.display = 'block';
+    emptyEl.style.display = 'none';
+
+    // 每筆與前一筆比較的變動（null = 首筆）
+    const changes = series.map((p, i) => ({
+      ...p,
+      diff: i === 0 ? null : p.cost - series[i-1].cost
+    }));
+
+    // 變動標註 plugin：於變動點畫出「變動日期／增減金額／變動後的值」
+    const costLabelPlugin = {
+      id: 'costChangeLabels',
+      afterDatasetsDraw(c) {
+        const { ctx, chartArea, scales } = c;
+        if (!chartArea) return;
+        ctx.save();
+        let flip = true;
+        changes.forEach((pt, i) => {
+          if (pt.diff == null || pt.diff === 0) return;
+          const x = scales.x.getPixelForValue(i);
+          const y = scales.y.getPixelForValue(pt.cost);
+          const inc = pt.diff > 0;
+          const color = inc ? '#dc2626' : '#059669';
+          const lines = [
+            pt.date,
+            (inc ? '+' : '−') + Math.abs(pt.diff).toLocaleString('zh-TW'),
+            '→ ' + pt.cost.toLocaleString('zh-TW'),
+          ];
+          ctx.font = '9px "Space Mono", monospace';
+          const w = Math.max(...lines.map(t => ctx.measureText(t).width)) + 14;
+          const h = 42;
+          flip = !flip;
+          let by = flip ? y - h - 12 : y + 12;
+          if (by < chartArea.top + 2) by = y + 12;
+          if (by + h > chartArea.bottom - 2) by = y - h - 12;
+          const bx = Math.min(Math.max(x - w/2, chartArea.left + 2), chartArea.right - w - 2);
+
+          // 連接虛線
+          ctx.strokeStyle = color;
+          ctx.lineWidth = 1;
+          ctx.setLineDash([2,2]);
+          ctx.beginPath();
+          ctx.moveTo(x, y);
+          ctx.lineTo(x, by < y ? by + h : by);
+          ctx.stroke();
+          ctx.setLineDash([]);
+
+          // 標註框
+          ctx.fillStyle = 'rgba(255,255,255,0.92)';
+          ctx.beginPath();
+          if (ctx.roundRect) ctx.roundRect(bx, by, w, h, 5); else ctx.rect(bx, by, w, h);
+          ctx.fill();
+          ctx.stroke();
+
+          // 文字：日期（灰）、變動值（紅/綠）、變動後的值（深）
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          const cx = bx + w/2;
+          ctx.fillStyle = '#64748b';
+          ctx.fillText(lines[0], cx, by + 8);
+          ctx.font = 'bold 10px "Space Mono", monospace';
+          ctx.fillStyle = color;
+          ctx.fillText(lines[1], cx, by + 21);
+          ctx.font = '9px "Space Mono", monospace';
+          ctx.fillStyle = '#1e293b';
+          ctx.fillText(lines[2], cx, by + 34);
+        });
+        ctx.restore();
+      }
+    };
+
+    chartInstances.cost = new Chart(document.getElementById('costChart'), {
+      type: 'line',
+      data: {
+        labels: series.map(p => p.date),
+        datasets: [{
+          label: '總付出成本 (NT$)',
+          data: series.map(p => p.cost),
+          borderColor: '#0891b2',
+          backgroundColor: 'rgba(8,145,178,0.07)',
+          borderWidth: 2,
+          stepped: true,
+          fill: true,
+          pointRadius: ctx => (changes[ctx.dataIndex]?.diff ? 5 : 3),
+          pointBackgroundColor: '#fff',
+          pointBorderColor: ctx => {
+            const d = changes[ctx.dataIndex]?.diff;
+            return d ? (d > 0 ? '#dc2626' : '#059669') : '#0891b2';
+          },
+          pointBorderWidth: 2,
+          pointHoverRadius: 7,
+        }]
+      },
+      plugins: [costLabelPlugin],
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        layout: { padding: { top: 8 } },
+        plugins: {
+          legend: { labels: { font: { family: 'Space Mono', size: 11 }, color: '#64748b', boxWidth: 14 } },
+          tooltip: { callbacks: {
+            label: ctx => ' 總付出成本：NT$ ' + ctx.raw.toLocaleString('zh-TW'),
+            afterLabel: ctx => {
+              const d = changes[ctx.dataIndex]?.diff;
+              if (d == null) return ' （首筆記錄）';
+              if (d === 0)   return ' 與前次相同，無變動';
+              return ` 較前次${d > 0 ? '增加 +' : '減少 −'}${Math.abs(d).toLocaleString('zh-TW')}`;
+            }
+          }}
+        },
+        scales: {
+          x: { grid: { display: false }, ticks: { font: { family: 'Space Mono', size: 10 }, color: '#64748b', maxTicksLimit: 10 } },
+          y: { grid: { color: '#dde3ec' }, ticks: {
+            font: { family: 'Space Mono', size: 10 }, color: '#64748b',
+            callback: v => v >= 1e6 ? (v/1e6).toFixed(1)+'M' : v.toLocaleString()
+          }}
+        }
+      }
+    });
+
+    // ── 成本變動歷史清單（新到舊，完整保留每筆成本記錄） ──
+    listEl.innerHTML = [...changes].reverse().map(c => {
+      const isUp   = c.diff != null && c.diff > 0;
+      const isDown = c.diff != null && c.diff < 0;
+      const cls  = isUp ? 'up' : isDown ? 'down' : 'neutral';
+      const desc = c.diff == null ? '首筆成本記錄'
+                 : c.diff === 0  ? '─ 無變動'
+                 : isUp ? `▲ 投入增加 +${c.diff.toLocaleString('zh-TW')}`
+                        : `▼ 成本減少 −${Math.abs(c.diff).toLocaleString('zh-TW')}`;
+      return `<div class="history-item">
+        <div class="history-left">
+          <div class="history-date">${c.date}</div>
+          <div class="history-note" style="color:var(--muted);font-size:0.72rem;">${desc}</div>
+        </div>
+        <div class="history-right">
+          <div class="history-amount ${cls}">NT$ ${c.cost.toLocaleString('zh-TW')}</div>
+        </div>
+      </div>`;
+    }).join('');
   }
 
 </script>
