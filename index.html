@@ -809,6 +809,8 @@
 
   <!-- Main grid -->
   <div class="main-grid">
+    <!-- Left column: 資產走勢 + 總付出成本 -->
+    <div style="display:flex; flex-direction:column; gap:20px; min-width:0;">
     <!-- Chart panel -->
     <div class="panel">
       <div class="panel-header">
@@ -848,6 +850,24 @@
         </div>
       </div>
     </div>
+
+    <!-- 總付出成本 panel -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">💰 總付出成本</div>
+      </div>
+      <div class="panel-body">
+        <div id="costEmpty" class="empty" style="display:none;">尚無總付出成本資料，新增資產記錄時填入「總付出成本」即可開始累積</div>
+        <div id="costChartWrap" class="chart-wrap" style="height:300px;"><canvas id="costChart"></canvas></div>
+        <div style="font-family:var(--font-mono);font-size:0.62rem;color:var(--muted);margin-top:8px;text-align:center;">
+          ※ 僅變動點顯示圓點與標籤「增減金額 → 變動後成本」（紅＝增加投入、綠＝成本減少）；滑鼠移到圓點可看日期明細
+        </div>
+        <hr class="divider">
+        <div style="font-family:var(--font-mono);font-size:0.68rem;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:10px;">💰 成本變動歷史</div>
+        <div class="scroll-list"><div class="history-list" id="costHistoryList"></div></div>
+      </div>
+    </div>
+    </div> <!-- /Left column -->
 
     <!-- Right panel: manual entry forms -->
     <div style="display:flex; flex-direction:column; gap:20px;">
@@ -1021,7 +1041,6 @@
       <button class="chart-tab" onclick="switchChart('trajectory')">預期資產軌跡</button>
       <button class="chart-tab" onclick="switchChart('ratesolve')">剩餘所需報酬率</button>
       <button class="chart-tab" onclick="switchChart('stackedarea')">資產結構</button>
-      <button class="chart-tab" onclick="switchChart('cost')">總付出成本</button>
     </div>
 
     <!-- Chart Panels -->
@@ -1134,18 +1153,6 @@
           <div style="font-family:var(--font-mono);font-size:0.62rem;color:var(--muted);margin-top:8px;text-align:center;">
             ※ 市值來源為 個股庫存明細，每次更新後自動寫入歷史快照
           </div>
-        </div>
-
-        <!-- Cost Change -->
-        <div id="chart-cost" class="analytics-panel" style="display:none;">
-          <div id="costEmpty" class="empty" style="display:none;">尚無總付出成本資料，新增資產記錄時填入「總付出成本」即可開始累積</div>
-          <div id="costChartWrap" class="chart-wrap" style="height:300px;"><canvas id="costChart"></canvas></div>
-          <div style="font-family:var(--font-mono);font-size:0.62rem;color:var(--muted);margin-top:8px;text-align:center;">
-            ※ 僅變動點顯示圓點與金額標籤（紅＝增加投入、綠＝成本減少）；滑鼠移到圓點可看日期與變動後成本，完整明細見下方清單
-          </div>
-          <hr class="divider">
-          <div style="font-family:var(--font-mono);font-size:0.68rem;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:10px;">💰 成本變動歷史</div>
-          <div class="scroll-list"><div class="history-list" id="costHistoryList"></div></div>
         </div>
 
       </div>
@@ -1610,6 +1617,7 @@
     renderSummary(data);
     renderChart(data);
     renderHistory();
+    renderCostChart();
   }
 
   function renderSummary(data) {
@@ -2304,7 +2312,6 @@
       case 'trajectory': renderTrajectoryChart(); break;
       case 'ratesolve':  calcRateSolve(); break;
       case 'stackedarea': renderStackedAreaChart(); break;
-      case 'cost':       renderCostChart(); break;
     }
   }
 
@@ -3048,7 +3055,8 @@
           const x = scales.x.getPixelForValue(i);
           const y = scales.y.getPixelForValue(pt.cost);
           const inc = pt.diff > 0;
-          const text = (inc ? '+' : '−') + Math.abs(pt.diff).toLocaleString('zh-TW');
+          const text = (inc ? '+' : '−') + Math.abs(pt.diff).toLocaleString('zh-TW')
+                     + ' → ' + pt.cost.toLocaleString('zh-TW');
           const w = ctx.measureText(text).width + padX * 2;
           const bx = Math.min(Math.max(x - w/2, chartArea.left), chartArea.right - w);
           let lane = 0;
@@ -3128,7 +3136,13 @@
         },
         scales: {
           x: { grid: { display: false }, ticks: { font: { family: 'Space Mono', size: 10 }, color: '#64748b', maxTicksLimit: 10 } },
-          y: { grid: { color: '#dde3ec' }, ticks: {
+          y: {
+            // Y 軸原點從 5.5M 開始；若資料低於 5.5M 則退回資料最小值往下留 5% 空間
+            min: (() => {
+              const lo = Math.min(...series.map(p => p.cost));
+              return lo >= 5500000 ? 5500000 : Math.floor(lo * 0.95);
+            })(),
+            grid: { color: '#dde3ec' }, ticks: {
             font: { family: 'Space Mono', size: 10 }, color: '#64748b',
             callback: v => v >= 1e6 ? (v/1e6).toFixed(1)+'M' : v.toLocaleString()
           }}
