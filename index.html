@@ -3092,6 +3092,48 @@
       }
     };
 
+    // hover 水平輔助線 plugin：滑鼠移到圓點時，畫出該點高度的水平線並在左側標數值
+    const costCrosshairPlugin = {
+      id: 'costCrosshair',
+      afterDatasetsDraw(c) {
+        const active = c.getActiveElements();
+        if (!active.length) return;
+        const { ctx, chartArea } = c;
+        const el = active[0].element;
+        const y = el.y;
+        if (y < chartArea.top || y > chartArea.bottom) return;
+        ctx.save();
+        // 水平虛線
+        ctx.strokeStyle = 'rgba(8,145,178,0.6)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([5, 4]);
+        ctx.beginPath();
+        ctx.moveTo(chartArea.left, y);
+        ctx.lineTo(chartArea.right, y);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        // 左側數值標籤
+        const val = series[active[0].index]?.cost;
+        if (val != null) {
+          const text = 'NT$ ' + val.toLocaleString('zh-TW');
+          ctx.font = 'bold 9px "Space Mono", monospace';
+          const w = ctx.measureText(text).width + 10;
+          const h = 15;
+          const bx = chartArea.left + 2;
+          const by = Math.min(Math.max(y - h/2, chartArea.top), chartArea.bottom - h);
+          ctx.fillStyle = '#0891b2';
+          ctx.beginPath();
+          if (ctx.roundRect) ctx.roundRect(bx, by, w, h, 4); else ctx.rect(bx, by, w, h);
+          ctx.fill();
+          ctx.fillStyle = '#fff';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(text, bx + w/2, by + h/2 + 0.5);
+        }
+        ctx.restore();
+      }
+    };
+
     chartInstances.cost = new Chart(document.getElementById('costChart'), {
       type: 'line',
       data: {
@@ -3115,7 +3157,7 @@
           pointHitRadius: 6,
         }]
       },
-      plugins: [costLabelPlugin],
+      plugins: [costCrosshairPlugin, costLabelPlugin],
       options: {
         responsive: true, maintainAspectRatio: false,
         layout: { padding: { top: 8 } },
