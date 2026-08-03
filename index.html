@@ -911,7 +911,7 @@
       <div id="costEmpty" class="empty" style="display:none;">尚無總付出成本資料，新增資產記錄時填入「總付出成本」即可開始累積</div>
       <div id="costChartWrap" class="chart-wrap" style="height:300px;"><canvas id="costChart"></canvas></div>
       <div style="font-family:var(--font-mono);font-size:0.62rem;color:var(--muted);margin-top:8px;text-align:center;">
-        ※ 僅變動點顯示圓點與標籤「增減金額 → 變動後成本」（紅＝增加投入、綠＝成本減少）；滑鼠移到圓點可看日期明細
+        ※ 僅變動點顯示圓點與增減金額標籤（紅＝增加投入、綠＝成本減少）；滑鼠移到圓點顯示水平線與日期、變動後成本明細
       </div>
       <hr class="divider">
       <div style="font-family:var(--font-mono);font-size:0.68rem;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:10px;">💰 成本變動歷史</div>
@@ -3052,8 +3052,7 @@
           const x = scales.x.getPixelForValue(i);
           const y = scales.y.getPixelForValue(pt.cost);
           const inc = pt.diff > 0;
-          const text = (inc ? '+' : '−') + Math.abs(pt.diff).toLocaleString('zh-TW')
-                     + ' → ' + pt.cost.toLocaleString('zh-TW');
+          const text = (inc ? '+' : '−') + Math.abs(pt.diff).toLocaleString('zh-TW');
           const w = ctx.measureText(text).width + padX * 2;
           const bx = Math.min(Math.max(x - w/2, chartArea.left), chartArea.right - w);
           let lane = 0;
