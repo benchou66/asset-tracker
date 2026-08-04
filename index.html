@@ -1684,6 +1684,8 @@
 
   // ─── Render ───
   function render() {
+    // 歷史記錄(總資產)更新時同步重算「9年三階段配置試算」
+    try { if (window.renderPlanSim) window.renderPlanSim(); } catch(e) {}
     const data = aggregateData(currentView);
     renderSummary(data);
     renderChart(data);
@@ -3316,14 +3318,27 @@
   }
   function simLiveData() {
     const stocks = (typeof holdings !== 'undefined' && holdings && holdings.stocks) ? holdings.stocks : [];
-    let total = 0, bond = 0;
+    let hTotal = 0, bond = 0;
     stocks.forEach(st => {
       const v = simParseVal(st.value);
-      total += v;
+      hTotal += v;
       if (st.code === '00720B' || /債/.test(st.name || '')) bond += v;
     });
-    if (total <= 0) return { total: FALLBACK_TOTAL, bond: 0, date: null, live: false };
-    return { total, bond, date: (holdings && holdings.date) || null, live: true };
+    const hDate = (holdings && holdings.date) || null;
+    // 歷史記錄(entries)最新一筆 = 頁面頂端「總資產」
+    let eAmt = 0, eDate = null;
+    if (typeof entries !== 'undefined' && Array.isArray(entries) && entries.length) {
+      const last = entries[entries.length - 1];
+      eAmt = simParseVal(last.amount);
+      eDate = last.date || null;
+    }
+    const bondRatio = hTotal > 0 ? bond / hTotal : 0; // 股債比例仍取自庫存明細
+    // 一律以頁面頂端「總資產」(歷史記錄最新一筆)為準;無歷史記錄時退回庫存合計
+    if (eAmt > 0) {
+      return { total: eAmt, bond: eAmt * bondRatio, date: eDate, src: '總資產(歷史記錄)', live: true };
+    }
+    if (hTotal > 0) return { total: hTotal, bond, date: hDate, src: '個股庫存合計', live: true };
+    return { total: FALLBACK_TOTAL, bond: 0, date: null, src: null, live: false };
   }
   function simMulberry32(a) {
     return function () {
@@ -3420,8 +3435,8 @@
   function simRenderTiles(R) {
     const pe = (R.probEnd*100).toFixed(0), pv = (R.probEver*100).toFixed(0);
     document.getElementById('simTiles').innerHTML =
-      '<div class="sim-tile"><div class="lb">起始資產（同步庫存）</div><div class="vl">'+simFmtWan(R.live.total)+'</div><div class="sb">'
-        + (R.live.live ? ('個股庫存合計' + (R.live.date ? ' · ' + R.live.date : '')) : '快照備援值（尚未載入庫存）') + '</div></div>'
+      '<div class="sim-tile"><div class="lb">起始資產（同步總資產）</div><div class="vl">'+simFmtWan(R.live.total)+'</div><div class="sb">'
+        + (R.live.live ? (R.live.src + (R.live.date ? ' · ' + R.live.date : '')) : '快照備援值（尚未載入資料）') + '</div></div>'
       + '<div class="sim-tile"><div class="lb">第 '+R.T+' 年末達標機率</div><div class="vl">'+pe+'%</div><div class="sb">期末資產 ≥ '+simFmtWan(R.goal)+'</div></div>'
       + '<div class="sim-tile"><div class="lb">期間內曾達標機率</div><div class="vl">'+pv+'%</div><div class="sb">任一年觸及目標'+(R.medHit ? '（中位達標年：第 '+R.medHit+' 年）' : '')+'</div></div>'
       + '<div class="sim-tile"><div class="lb">期末資產中位數</div><div class="vl">'+simFmtWan(R.median)+'</div><div class="sb">4,000 次模擬第 50 百分位</div></div>'
