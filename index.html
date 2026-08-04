@@ -1212,6 +1212,30 @@
       </div>
       <div class="panel-body">
         <div class="sim-tiles" id="simTiles"></div>
+        <div style="margin:2px 0 14px;display:flex;gap:18px;align-items:center;flex-wrap:wrap;font-size:0.78rem;">
+          <span style="font-family:var(--font-mono);font-size:0.68rem;color:var(--muted);letter-spacing:0.08em;">模擬模式</span>
+          <label style="display:inline-flex;gap:6px;align-items:center;cursor:pointer;"><input type="radio" name="simMode" value="mc" checked> 蒙地卡羅（隨機）</label>
+          <label style="display:inline-flex;gap:6px;align-items:center;cursor:pointer;"><input type="radio" name="simMode" value="scenario"> 自訂大盤情境</label>
+        </div>
+        <div id="simScenarioBox" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:16px;">
+          <div style="font-size:0.72rem;color:var(--muted);margin-bottom:10px;line-height:1.8;">
+            每行一個錨點：「<b>西元年 加權指數</b>」（該年年底的指數）。年與年之間自動複利內插；若前後錨點指數持平（±2%），中間年份改以「震盪幅度」上下交錯。
+            情境涵蓋以外的年份回到蒙地卡羅隨機模擬（沿用下方報酬／波動滑桿）。股票年報酬＝指數漲跌＋股息殖利率。
+            此模式下，達標機率的意義是「<b>在此情境成真的前提下</b>」。
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px 20px;margin-bottom:10px;">
+            <div><div style="font-size:0.7rem;color:var(--muted);margin-bottom:3px;">目前大盤指數</div>
+              <input type="number" id="sim-sc-idx" value="43229" step="100" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-family:var(--font-mono);font-size:0.85rem;font-weight:700;background:var(--surface);color:var(--text);"></div>
+            <div><div style="font-size:0.7rem;color:var(--muted);margin-bottom:3px;">股息殖利率（%／年）</div>
+              <input type="number" id="sim-sc-div" value="3" step="0.5" min="0" max="8" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-family:var(--font-mono);font-size:0.85rem;font-weight:700;background:var(--surface);color:var(--text);"></div>
+            <div><div style="font-size:0.7rem;color:var(--muted);margin-bottom:3px;">震盪幅度（%，峰谷差）</div>
+              <input type="number" id="sim-sc-amp" value="30" step="5" min="0" max="60" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-family:var(--font-mono);font-size:0.85rem;font-weight:700;background:var(--surface);color:var(--text);"></div>
+          </div>
+          <div style="font-size:0.7rem;color:var(--muted);margin-bottom:3px;">大盤錨點（每行「西元年 指數」）</div>
+          <textarea id="sim-sc-wp" rows="4" spellcheck="false" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-family:var(--font-mono);font-size:0.82rem;background:var(--surface);color:var(--text);resize:vertical;">2026 50000
+2028 80000
+2031 80000</textarea>
+        </div>
         <div class="sim-controls" id="simControls"></div>
         <div class="sim-chart-title">資產軌跡分布（起點＝個股庫存即時總市值，每年年底計入投入）</div>
         <div class="sim-box" id="simFanBox">
@@ -3378,6 +3402,11 @@
       yearParams.push({ w, muL, sigL });
     }
 
+    // 自訂情境:情境涵蓋年份的股票報酬固定為指數路徑,債券仍隨機
+    const sc = (simState.mode === 'scenario') ? simParseScenario(T) : null;
+    const bdSigL = Math.sqrt(Math.log(1 + (bdSig*bdSig)/((1+bdMu)*(1+bdMu))));
+    const bdMuL = Math.log(1+bdMu) - bdSigL*bdSigL/2;
+
     const rng = simMulberry32(20260804);
     const byYear = Array.from({ length: T+1 }, () => []);
     const hitYears = [];
@@ -3388,7 +3417,14 @@
       for (let y = 0; y < T; y++) {
         const u1 = Math.max(rng(), 1e-12), u2 = rng();
         const z = Math.sqrt(-2*Math.log(u1)) * Math.cos(2*Math.PI*u2);
-        const r = Math.exp(yearParams[y].muL + yearParams[y].sigL * z) - 1;
+        let r;
+        if (sc && y < sc.eqRets.length) {
+          const rb = Math.exp(bdMuL + bdSigL * z) - 1;
+          const w = yearParams[y].w;
+          r = w * sc.eqRets[y] + (1 - w) * rb;
+        } else {
+          r = Math.exp(yearParams[y].muL + yearParams[y].sigL * z) - 1;
+        }
         v = v * (1 + r) + C;
         byYear[y+1].push(v);
         if (!hit && v >= goal) hit = y + 1;
@@ -3409,7 +3445,7 @@
       const fv = start*Math.pow(1+r,T) + C*(Math.pow(1+r,T)-1)/r;
       if (fv < goal) lo = r; else hi = r;
     }
-    return { T, goal, bands, yearParams, live,
+    return { T, goal, bands, yearParams, live, scenario: sc,
       probEnd: endHit/N, probEver: everHit/N, medHit,
       median: bands[T].p50, reqR: (lo+hi)/2 };
   }
@@ -3429,7 +3465,57 @@
         simRecompute();
       });
     }
+    // 模擬模式切換與情境輸入
+    simState.mode = 'mc';
+    document.querySelectorAll('input[name="simMode"]').forEach(function (r) {
+      r.addEventListener('change', function (e) {
+        simState.mode = e.target.value;
+        const b = document.getElementById('simScenarioBox');
+        if (b) b.style.display = simState.mode === 'scenario' ? 'block' : 'none';
+        simRecompute();
+      });
+    });
+    ['sim-sc-idx','sim-sc-div','sim-sc-amp','sim-sc-wp'].forEach(function (id) {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener('input', simRecompute);
+    });
     simBuilt = true;
+  }
+
+  // ── 自訂大盤情境:錨點 → 每年指數水準與股票報酬 ──
+  const SIM_BASE_YEAR = 2026; // 今＝2026年中;「2026」錨點視為第1年末(2026年底)
+  function simParseScenario(T) {
+    const idxEl = document.getElementById('sim-sc-idx');
+    if (!idxEl) return null;
+    const baseIdx = parseFloat(idxEl.value) || 43229;
+    const divY = (parseFloat(document.getElementById('sim-sc-div').value) || 0) / 100;
+    const amp = (parseFloat(document.getElementById('sim-sc-amp').value) || 0) / 100;
+    const lines = String(document.getElementById('sim-sc-wp').value || '').split(/\n+/);
+    const wps = [];
+    lines.forEach(function (ln) {
+      const m = ln.trim().match(/^(\d{4})[\s,\/]+([\d,\.]+)/);
+      if (!m) return;
+      const t = parseInt(m[1], 10) - SIM_BASE_YEAR + 1;
+      const lv = parseFloat(m[2].replace(/,/g, ''));
+      if (t >= 1 && t <= T && lv > 0) wps.push({ t: t, lv: lv });
+    });
+    wps.sort(function (a, b) { return a.t - b.t; });
+    if (!wps.length) return null;
+    const levels = [baseIdx];
+    let prevT = 0, prevL = baseIdx;
+    wps.forEach(function (wp) {
+      const n = wp.t - prevT;
+      const flat = Math.abs(wp.lv - prevL) / prevL < 0.02;
+      for (let k = 1; k < n; k++) {
+        if (flat) levels.push(wp.lv * (1 + (k % 2 === 1 ? amp/2 : -amp/2))); // 持平段:上下交錯
+        else levels.push(prevL * Math.pow(wp.lv / prevL, k / n));            // 趨勢段:複利內插
+      }
+      levels.push(wp.lv);
+      prevT = wp.t; prevL = wp.lv;
+    });
+    const eqRets = [];
+    for (let i = 1; i < levels.length; i++) eqRets.push(levels[i] / levels[i-1] - 1 + divY);
+    return { levels: levels, eqRets: eqRets };
   }
 
   function simRenderTiles(R) {
@@ -3506,7 +3592,9 @@
         + '<div class="rw"><span>中位數</span><span>'+simFmtWan(b.p50)+'</span></div>'
         + '<div class="rw"><span>p25</span><span>'+simFmtWan(b.p25)+'</span></div>'
         + '<div class="rw"><span>悲觀 p10</span><span>'+simFmtWan(b.p10)+'</span></div>'
-        + '<div class="rw" style="margin-top:4px"><span>當年配置</span><span>股 '+(w*100).toFixed(0)+'% / 債 '+((1-w)*100).toFixed(0)+'%</span></div>';
+        + '<div class="rw" style="margin-top:4px"><span>當年配置</span><span>股 '+(w*100).toFixed(0)+'% / 債 '+((1-w)*100).toFixed(0)+'%</span></div>'
+        + ((R.scenario && y < R.scenario.levels.length)
+            ? '<div class="rw"><span>情境大盤</span><span>'+Math.round(R.scenario.levels[y]).toLocaleString('zh-TW')+' 點</span></div>' : '');
       const bw = document.getElementById('simFanBox').getBoundingClientRect();
       let left = e.clientX - bw.left + 16;
       if (left + 185 > bw.width) left = e.clientX - bw.left - 195;
