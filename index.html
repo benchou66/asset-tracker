@@ -1171,6 +1171,80 @@
       </div>
     </div>
   </div>
+  <!-- ── 9年三階段配置試算（蒙地卡羅） ── -->
+  <style>
+    .sim-tiles { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:12px; margin-bottom:18px; }
+    .sim-tile { background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:12px 14px; }
+    .sim-tile .lb { font-size:0.68rem; font-family:var(--font-mono); color:var(--muted); letter-spacing:0.05em; }
+    .sim-tile .vl { font-size:1.45rem; font-weight:700; font-family:var(--font-mono); color:var(--accent); margin-top:2px; }
+    .sim-tile .sb { font-size:0.65rem; color:var(--muted); margin-top:2px; }
+    .sim-controls { display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:8px 22px; margin-bottom:18px; }
+    .sim-ctl { display:grid; grid-template-columns:1fr auto; align-items:center; gap:0 10px; }
+    .sim-ctl label { font-size:0.74rem; color:var(--muted); }
+    .sim-ctl output { font-size:0.8rem; font-weight:700; font-family:var(--font-mono); color:var(--text); }
+    .sim-ctl input[type=range] { grid-column:1/-1; width:100%; accent-color:var(--accent); }
+    .sim-chart-title { font-family:var(--font-mono); font-size:0.68rem; color:var(--muted); letter-spacing:0.08em; margin-bottom:8px; }
+    .sim-box { position:relative; }
+    .sim-box svg { display:block; width:100%; height:auto; }
+    .sim-tip { position:absolute; pointer-events:none; display:none; z-index:5; background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:8px 10px; font-size:0.72rem; box-shadow:0 4px 14px rgba(30,41,59,0.15); min-width:165px; }
+    .sim-tip .tt { font-weight:700; margin-bottom:4px; }
+    .sim-tip .rw { display:flex; justify-content:space-between; gap:12px; }
+    .sim-tip .rw span:last-child { font-family:var(--font-mono); font-weight:600; }
+    .sim-legend { display:flex; flex-wrap:wrap; gap:14px; font-size:0.7rem; color:var(--muted); margin:8px 2px 0; }
+    .sim-legend .it { display:inline-flex; align-items:center; gap:6px; }
+    .sim-sw { width:14px; height:8px; border-radius:2px; display:inline-block; }
+    .sim-sw.ln { height:3px; }
+    .sim-table { width:100%; border-collapse:collapse; font-size:0.72rem; font-family:var(--font-mono); }
+    .sim-table th { text-align:right; color:var(--muted); font-weight:500; padding:5px 8px; border-bottom:1px solid var(--border); white-space:nowrap; }
+    .sim-table td { text-align:right; padding:5px 8px; border-bottom:1px solid var(--border); }
+    .sim-table th:first-child, .sim-table td:first-child { text-align:left; }
+    .sim-note { font-size:0.68rem; color:var(--muted); background:var(--surface2); border-radius:8px; padding:10px 12px; margin-top:14px; line-height:1.7; }
+  </style>
+  <div style="margin-top:28px;margin-bottom:40px;">
+    <div style="font-family:var(--font-mono);font-size:0.7rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:16px;display:flex;align-items:center;gap:10px;">
+      🎯 9年三階段配置試算（蒙地卡羅）
+      <div style="flex:1;height:1px;background:var(--border);"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">三階段滑降策略 × 4,000 次模擬</div>
+        <div style="font-family:var(--font-mono);font-size:0.68rem;color:var(--muted);" id="simSyncInfo"></div>
+      </div>
+      <div class="panel-body">
+        <div class="sim-tiles" id="simTiles"></div>
+        <div class="sim-controls" id="simControls"></div>
+        <div class="sim-chart-title">資產軌跡分布（起點＝個股庫存即時總市值，每年年底計入投入）</div>
+        <div class="sim-box" id="simFanBox">
+          <svg id="simFan" viewBox="0 0 900 380" role="img" aria-label="資產軌跡分布圖"></svg>
+          <div class="sim-tip" id="simFanTip"></div>
+        </div>
+        <div class="sim-legend">
+          <span class="it"><span class="sim-sw ln" style="background:var(--accent)"></span>中位數路徑</span>
+          <span class="it"><span class="sim-sw" style="background:var(--accent);opacity:.30"></span>25–75% 區間</span>
+          <span class="it"><span class="sim-sw" style="background:var(--accent);opacity:.14"></span>10–90% 區間</span>
+          <span class="it"><span class="sim-sw ln" style="background:var(--muted)"></span>目標線</span>
+        </div>
+        <div class="sim-chart-title" style="margin-top:20px;">股債滑降路徑（滑降開始年前維持現行比重，之後線性降至期末比重）</div>
+        <div class="sim-box" id="simGlideBox">
+          <svg id="simGlide" viewBox="0 0 900 200" role="img" aria-label="股債配置滑降圖"></svg>
+          <div class="sim-tip" id="simGlideTip"></div>
+        </div>
+        <div class="sim-legend">
+          <span class="it"><span class="sim-sw" style="background:var(--accent)"></span>股票</span>
+          <span class="it"><span class="sim-sw" style="background:var(--amber)"></span>債券</span>
+        </div>
+        <details style="margin-top:14px;">
+          <summary style="cursor:pointer;font-size:0.78rem;font-weight:700;">逐年數據表（配置與資產百分位）</summary>
+          <div style="overflow-x:auto;margin-top:10px;"><table class="sim-table" id="simYearTable"></table></div>
+        </details>
+        <div class="sim-note">
+          模型假設：年報酬呈對數常態分布、股債相關係數 0、每年年底投入、固定亂數種子（同參數可重現）、暫不計稅費。
+          三階段＝<b>進攻期</b>（維持現行股票比重）→ <b>滑降期</b>（自滑降開始年線性降股增債，實務可每季分批）→ <b>穩健期</b>（期末比重，年度再平衡）。
+          本工具為教育性試算，非未來績效保證，亦非個人化投資建議。
+        </div>
+      </div>
+    </div>
+  </div>
 </div> <!-- /wrapper -->
 
 <div class="toast" id="toast"></div>
@@ -2145,6 +2219,8 @@
   }
 
   function renderHoldings() {
+    // 持倉更新時同步重算「9年三階段配置試算」(起始資產=庫存即時總市值)
+    try { if (window.renderPlanSim) window.renderPlanSim(); } catch(e) {}
     const el     = document.getElementById('holdingsTable');
     const dateEl = document.getElementById('holdingsDate');
 
@@ -3209,6 +3285,307 @@
     }).join('') || '<div class="empty">尚無成本變動</div>';
   }
 
+</script>
+<script>
+/* ══════════ 9年三階段配置試算（蒙地卡羅） ══════════ */
+(function () {
+  'use strict';
+  const FALLBACK_TOTAL = 13385714; // 2026/08/04 快照（未登入或無資料時使用）
+
+  const SIM_PARAMS = [
+    { id:'contrib', label:'每年投入（萬）',        min:0,    max:200,  step:6,   def:36,  fmt:v=>v+' 萬' },
+    { id:'goal',    label:'目標金額（萬）',        min:2000, max:8000, step:100, def:4000,fmt:v=>simFmtWan(v*1e4) },
+    { id:'years',   label:'規劃年限（年）',        min:3,    max:15,   step:1,   def:9,   fmt:v=>v+' 年' },
+    { id:'glide',   label:'滑降開始年（第 n 年）', min:1,    max:14,   step:1,   def:3,   fmt:v=>'第 '+v+' 年' },
+    { id:'endEq',   label:'期末股票比重（%）',     min:40,   max:100,  step:5,   def:60,  fmt:v=>v+'%' },
+    { id:'eqMu',    label:'股票年化報酬（%）',     min:4,    max:14,   step:0.5, def:10,  fmt:v=>v.toFixed(1)+'%' },
+    { id:'eqSig',   label:'股票年化波動（%）',     min:12,   max:35,   step:1,   def:24,  fmt:v=>v+'%' },
+    { id:'bdMu',    label:'債券年化報酬（%）',     min:2,    max:5,    step:0.25,def:3.5, fmt:v=>v.toFixed(2)+'%' },
+    { id:'bdSig',   label:'債券年化波動（%）',     min:3,    max:10,   step:1,   def:6,   fmt:v=>v+'%' },
+  ];
+  const simState = {};
+  let simBuilt = false;
+
+  function simFmtWan(v) {
+    if (v >= 1e8) return (v/1e8).toFixed(2) + ' 億';
+    return Math.round(v/1e4).toLocaleString('zh-TW') + ' 萬';
+  }
+  function simParseVal(v) {
+    const n = parseFloat(String(v ?? '').replace(/[,+%\s$]/g, ''));
+    return isNaN(n) ? 0 : n;
+  }
+  function simLiveData() {
+    const stocks = (typeof holdings !== 'undefined' && holdings && holdings.stocks) ? holdings.stocks : [];
+    let total = 0, bond = 0;
+    stocks.forEach(st => {
+      const v = simParseVal(st.value);
+      total += v;
+      if (st.code === '00720B' || /債/.test(st.name || '')) bond += v;
+    });
+    if (total <= 0) return { total: FALLBACK_TOTAL, bond: 0, date: null, live: false };
+    return { total, bond, date: (holdings && holdings.date) || null, live: true };
+  }
+  function simMulberry32(a) {
+    return function () {
+      a |= 0; a = a + 0x6D2B79F5 | 0;
+      let t = Math.imul(a ^ a >>> 15, 1 | a);
+      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+  function simQuantile(sorted, q) {
+    const pos = (sorted.length - 1) * q;
+    const lo = Math.floor(pos), hi = Math.ceil(pos);
+    return sorted[lo] + (sorted[hi] - sorted[lo]) * (pos - lo);
+  }
+  function simWeight(y, T, gs, w0, endEq) {
+    if (y < gs || gs >= T) return w0;
+    if (endEq >= w0) return w0;
+    const w = w0 - (w0 - endEq) * (y - gs) / (T - gs);
+    return Math.max(endEq, Math.min(w0, w));
+  }
+
+  function simRun() {
+    const live = simLiveData();
+    const T = simState.years, N = 4000;
+    const start = live.total, C = simState.contrib * 1e4, goal = simState.goal * 1e4;
+    const gs = simState.glide, endEq = simState.endEq / 100;
+    const w0 = live.total > 0 ? Math.max(0, 1 - live.bond / live.total) : 1;
+    const eqMu = simState.eqMu/100, eqSig = simState.eqSig/100, bdMu = simState.bdMu/100, bdSig = simState.bdSig/100;
+
+    const yearParams = [];
+    for (let y = 0; y < T; y++) {
+      const w = simWeight(y, T, gs, w0, endEq);
+      const mu = w*eqMu + (1-w)*bdMu;
+      const sig = Math.sqrt(w*w*eqSig*eqSig + (1-w)*(1-w)*bdSig*bdSig);
+      const sigL = Math.sqrt(Math.log(1 + (sig*sig)/((1+mu)*(1+mu))));
+      const muL = Math.log(1+mu) - sigL*sigL/2;
+      yearParams.push({ w, muL, sigL });
+    }
+
+    const rng = simMulberry32(20260804);
+    const byYear = Array.from({ length: T+1 }, () => []);
+    const hitYears = [];
+    let everHit = 0, endHit = 0;
+    for (let i = 0; i < N; i++) {
+      let v = start, hit = 0;
+      byYear[0].push(v);
+      for (let y = 0; y < T; y++) {
+        const u1 = Math.max(rng(), 1e-12), u2 = rng();
+        const z = Math.sqrt(-2*Math.log(u1)) * Math.cos(2*Math.PI*u2);
+        const r = Math.exp(yearParams[y].muL + yearParams[y].sigL * z) - 1;
+        v = v * (1 + r) + C;
+        byYear[y+1].push(v);
+        if (!hit && v >= goal) hit = y + 1;
+      }
+      if (hit) { everHit++; hitYears.push(hit); }
+      if (v >= goal) endHit++;
+    }
+    const bands = byYear.map(arr => {
+      arr.sort((a,b) => a-b);
+      return { p10:simQuantile(arr,.10), p25:simQuantile(arr,.25), p50:simQuantile(arr,.50), p75:simQuantile(arr,.75), p90:simQuantile(arr,.90) };
+    });
+    hitYears.sort((a,b) => a-b);
+    const medHit = hitYears.length ? hitYears[Math.floor(hitYears.length/2)] : null;
+
+    let lo = 0.0001, hi = 1;
+    for (let k = 0; k < 60; k++) {
+      const r = (lo+hi)/2;
+      const fv = start*Math.pow(1+r,T) + C*(Math.pow(1+r,T)-1)/r;
+      if (fv < goal) lo = r; else hi = r;
+    }
+    return { T, goal, bands, yearParams, live,
+      probEnd: endHit/N, probEver: everHit/N, medHit,
+      median: bands[T].p50, reqR: (lo+hi)/2 };
+  }
+
+  function simBuildControls() {
+    const box = document.getElementById('simControls');
+    for (const p of SIM_PARAMS) {
+      simState[p.id] = p.def;
+      const div = document.createElement('div');
+      div.className = 'sim-ctl';
+      div.innerHTML = '<label for="sim-in-'+p.id+'">'+p.label+'</label><output id="sim-out-'+p.id+'">'+p.fmt(p.def)+'</output>'
+        + '<input type="range" id="sim-in-'+p.id+'" min="'+p.min+'" max="'+p.max+'" step="'+p.step+'" value="'+p.def+'">';
+      box.appendChild(div);
+      div.querySelector('input').addEventListener('input', function (e) {
+        simState[p.id] = parseFloat(e.target.value);
+        document.getElementById('sim-out-'+p.id).textContent = p.fmt(simState[p.id]);
+        simRecompute();
+      });
+    }
+    simBuilt = true;
+  }
+
+  function simRenderTiles(R) {
+    const pe = (R.probEnd*100).toFixed(0), pv = (R.probEver*100).toFixed(0);
+    document.getElementById('simTiles').innerHTML =
+      '<div class="sim-tile"><div class="lb">起始資產（同步庫存）</div><div class="vl">'+simFmtWan(R.live.total)+'</div><div class="sb">'
+        + (R.live.live ? ('個股庫存合計' + (R.live.date ? ' · ' + R.live.date : '')) : '快照備援值（尚未載入庫存）') + '</div></div>'
+      + '<div class="sim-tile"><div class="lb">第 '+R.T+' 年末達標機率</div><div class="vl">'+pe+'%</div><div class="sb">期末資產 ≥ '+simFmtWan(R.goal)+'</div></div>'
+      + '<div class="sim-tile"><div class="lb">期間內曾達標機率</div><div class="vl">'+pv+'%</div><div class="sb">任一年觸及目標'+(R.medHit ? '（中位達標年：第 '+R.medHit+' 年）' : '')+'</div></div>'
+      + '<div class="sim-tile"><div class="lb">期末資產中位數</div><div class="vl">'+simFmtWan(R.median)+'</div><div class="sb">4,000 次模擬第 50 百分位</div></div>'
+      + '<div class="sim-tile"><div class="lb">確定性所需年化</div><div class="vl">'+(R.reqR*100).toFixed(1)+'%</div><div class="sb">固定報酬恰好達標所需</div></div>';
+    const info = document.getElementById('simSyncInfo');
+    if (info) info.textContent = R.live.live ? ('同步：NT$ ' + Math.round(R.live.total).toLocaleString('zh-TW')) : '';
+  }
+
+  const SIM_FAN = { W:900, H:380, mL:70, mR:20, mT:16, mB:34 };
+  function simNiceStep(raw) {
+    const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+    const n = raw / mag;
+    return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10) * mag;
+  }
+  function simRenderFan(R) {
+    const svg = document.getElementById('simFan');
+    const { W,H,mL,mR,mT,mB } = SIM_FAN;
+    const iw = W-mL-mR, ih = H-mT-mB;
+    const T = R.T;
+    const yMax = Math.max(R.goal, R.bands[T].p90) * 1.06;
+    const X = y => mL + iw * y / T;
+    const Y = v => mT + ih * (1 - v / yMax);
+    let g = '';
+    const step = simNiceStep(yMax/5);
+    for (let v = 0; v <= yMax; v += step) {
+      g += '<line x1="'+mL+'" y1="'+Y(v)+'" x2="'+(W-mR)+'" y2="'+Y(v)+'" stroke="#eef1f6" stroke-width="1"/>';
+      g += '<text x="'+(mL-8)+'" y="'+(Y(v)+4)+'" text-anchor="end" font-size="11" fill="#64748b" font-family="Space Mono, monospace">'+simFmtWan(v)+'</text>';
+    }
+    for (let y = 0; y <= T; y++) {
+      g += '<text x="'+X(y)+'" y="'+(H-10)+'" text-anchor="middle" font-size="11" fill="#64748b" font-family="Space Mono, monospace">'+(y===0?'今':y)+'</text>';
+    }
+    g += '<line x1="'+mL+'" y1="'+(mT+ih)+'" x2="'+(W-mR)+'" y2="'+(mT+ih)+'" stroke="#dde3ec" stroke-width="1"/>';
+    const area = (hiKey, loKey) => {
+      let d = '';
+      for (let y = 0; y <= T; y++) d += (y? 'L':'M') + X(y).toFixed(1) + ' ' + Y(R.bands[y][hiKey]).toFixed(1);
+      for (let y = T; y >= 0; y--) d += 'L' + X(y).toFixed(1) + ' ' + Y(R.bands[y][loKey]).toFixed(1);
+      return d + 'Z';
+    };
+    g += '<path d="'+area('p90','p10')+'" fill="#2563eb" opacity="0.12"/>';
+    g += '<path d="'+area('p75','p25')+'" fill="#2563eb" opacity="0.24"/>';
+    let mp = '';
+    for (let y = 0; y <= T; y++) mp += (y?'L':'M') + X(y).toFixed(1) + ' ' + Y(R.bands[y].p50).toFixed(1);
+    g += '<path d="'+mp+'" fill="none" stroke="#2563eb" stroke-width="2.5" stroke-linejoin="round"/>';
+    g += '<line x1="'+mL+'" y1="'+Y(R.goal)+'" x2="'+(W-mR)+'" y2="'+Y(R.goal)+'" stroke="#64748b" stroke-width="1.5" stroke-dasharray="6 4"/>';
+    g += '<text x="'+(W-mR)+'" y="'+(Y(R.goal)-6)+'" text-anchor="end" font-size="11.5" font-weight="700" fill="#475569" font-family="Space Mono, monospace">目標 '+simFmtWan(R.goal)+'</text>';
+    g += '<text x="'+(X(T)-6)+'" y="'+(Y(R.bands[T].p50)-8)+'" text-anchor="end" font-size="11.5" font-weight="700" fill="#2563eb" font-family="Space Mono, monospace">'+simFmtWan(R.bands[T].p50)+'</text>';
+    g += '<line id="simFanCross" x1="0" y1="'+mT+'" x2="0" y2="'+(mT+ih)+'" stroke="#c8d0dc" stroke-width="1" visibility="hidden"/>';
+    g += '<rect id="simFanHover" x="'+mL+'" y="'+mT+'" width="'+iw+'" height="'+ih+'" fill="transparent"/>';
+    svg.innerHTML = g;
+
+    const tip = document.getElementById('simFanTip');
+    const cross = svg.querySelector('#simFanCross');
+    const hov = svg.querySelector('#simFanHover');
+    hov.addEventListener('mousemove', function (e) {
+      const box = svg.getBoundingClientRect();
+      const sx = (e.clientX - box.left) * (W / box.width);
+      const y = Math.max(0, Math.min(T, Math.round((sx - mL) / iw * T)));
+      const px = mL + iw * y / T;
+      cross.setAttribute('x1', px); cross.setAttribute('x2', px);
+      cross.setAttribute('visibility', 'visible');
+      const b = R.bands[y];
+      const w = y === 0 ? R.yearParams[0].w : R.yearParams[Math.min(y, T)-1].w;
+      tip.style.display = 'block';
+      tip.innerHTML = '<div class="tt">'+(y===0?'今天':'第 '+y+' 年末')+'</div>'
+        + '<div class="rw"><span>樂觀 p90</span><span>'+simFmtWan(b.p90)+'</span></div>'
+        + '<div class="rw"><span>p75</span><span>'+simFmtWan(b.p75)+'</span></div>'
+        + '<div class="rw"><span>中位數</span><span>'+simFmtWan(b.p50)+'</span></div>'
+        + '<div class="rw"><span>p25</span><span>'+simFmtWan(b.p25)+'</span></div>'
+        + '<div class="rw"><span>悲觀 p10</span><span>'+simFmtWan(b.p10)+'</span></div>'
+        + '<div class="rw" style="margin-top:4px"><span>當年配置</span><span>股 '+(w*100).toFixed(0)+'% / 債 '+((1-w)*100).toFixed(0)+'%</span></div>';
+      const bw = document.getElementById('simFanBox').getBoundingClientRect();
+      let left = e.clientX - bw.left + 16;
+      if (left + 185 > bw.width) left = e.clientX - bw.left - 195;
+      tip.style.left = left + 'px';
+      tip.style.top = (e.clientY - bw.top + 10) + 'px';
+    });
+    hov.addEventListener('mouseleave', function () {
+      tip.style.display = 'none';
+      cross.setAttribute('visibility', 'hidden');
+    });
+  }
+
+  const SIM_GL = { W:900, H:200, mL:70, mR:20, mT:12, mB:30 };
+  function simRenderGlide(R) {
+    const svg = document.getElementById('simGlide');
+    const { W,H,mL,mR,mT,mB } = SIM_GL;
+    const iw = W-mL-mR, ih = H-mT-mB;
+    const T = R.T;
+    const X = y => mL + iw * y / T;
+    const Y = f => mT + ih * (1 - f);
+    const wAt = y => R.yearParams[Math.max(0, Math.min(Math.floor(y), T-1))].w;
+    let g = '';
+    [0,.25,.5,.75,1].forEach(f => {
+      g += '<line x1="'+mL+'" y1="'+Y(f)+'" x2="'+(W-mR)+'" y2="'+Y(f)+'" stroke="#eef1f6" stroke-width="1"/>';
+      g += '<text x="'+(mL-8)+'" y="'+(Y(f)+4)+'" text-anchor="end" font-size="11" fill="#64748b" font-family="Space Mono, monospace">'+(f*100)+'%</text>';
+    });
+    let d1 = 'M'+X(0)+' '+Y(0);
+    for (let y = 0; y <= T; y++) d1 += 'L'+X(y).toFixed(1)+' '+Y(wAt(y)).toFixed(1);
+    d1 += 'L'+X(T)+' '+Y(0)+'Z';
+    g += '<path d="'+d1+'" fill="#2563eb" fill-opacity="0.82" stroke="#ffffff" stroke-width="2"/>';
+    let d2 = 'M'+X(0)+' '+Y(1);
+    for (let y = 0; y <= T; y++) d2 += 'L'+X(y).toFixed(1)+' '+Y(wAt(y)).toFixed(1);
+    d2 += 'L'+X(T)+' '+Y(1)+'Z';
+    g += '<path d="'+d2+'" fill="#d97706" fill-opacity="0.82" stroke="#ffffff" stroke-width="2"/>';
+    for (let y = 0; y <= T; y++) {
+      g += '<text x="'+X(y)+'" y="'+(H-8)+'" text-anchor="middle" font-size="11" fill="#64748b" font-family="Space Mono, monospace">'+(y===0?'今':y)+'</text>';
+    }
+    g += '<text x="'+X(T*0.12)+'" y="'+Y(0.4)+'" font-size="12" font-weight="700" fill="#ffffff">股票</text>';
+    const endW = wAt(T);
+    if (endW < 0.92) g += '<text x="'+X(T*0.9)+'" y="'+(Y((1+endW)/2)+4)+'" text-anchor="middle" font-size="12" font-weight="700" fill="#ffffff">債券</text>';
+    g += '<rect id="simGlHover" x="'+mL+'" y="'+mT+'" width="'+iw+'" height="'+ih+'" fill="transparent"/>';
+    svg.innerHTML = g;
+
+    const tip = document.getElementById('simGlideTip');
+    const hov = svg.querySelector('#simGlHover');
+    hov.addEventListener('mousemove', function (e) {
+      const box = svg.getBoundingClientRect();
+      const sx = (e.clientX - box.left) * (W / box.width);
+      const y = Math.max(0, Math.min(T, Math.round((sx - mL) / iw * T)));
+      const w = wAt(y);
+      tip.style.display = 'block';
+      tip.innerHTML = '<div class="tt">'+(y===0?'今天':'第 '+y+' 年')+'</div>'
+        + '<div class="rw"><span>股票</span><span>'+(w*100).toFixed(0)+'%</span></div>'
+        + '<div class="rw"><span>債券</span><span>'+((1-w)*100).toFixed(0)+'%</span></div>';
+      const bw = document.getElementById('simGlideBox').getBoundingClientRect();
+      let left = e.clientX - bw.left + 16;
+      if (left + 150 > bw.width) left = e.clientX - bw.left - 160;
+      tip.style.left = left + 'px';
+      tip.style.top = (e.clientY - bw.top + 10) + 'px';
+    });
+    hov.addEventListener('mouseleave', function () { tip.style.display = 'none'; });
+  }
+
+  function simRenderTable(R) {
+    let html = '<tr><th>年度</th><th>股/債</th><th>悲觀 p10</th><th>p25</th><th>中位數</th><th>p75</th><th>樂觀 p90</th></tr>';
+    for (let y = 0; y <= R.T; y++) {
+      const b = R.bands[y];
+      const w = y === 0 ? R.yearParams[0].w : R.yearParams[y-1].w;
+      html += '<tr><td>'+(y===0?'今天':'第 '+y+' 年末')+'</td>'
+        + '<td>'+(w*100).toFixed(0)+' / '+((1-w)*100).toFixed(0)+'</td>'
+        + '<td>'+simFmtWan(b.p10)+'</td><td>'+simFmtWan(b.p25)+'</td>'
+        + '<td><b>'+simFmtWan(b.p50)+'</b></td><td>'+simFmtWan(b.p75)+'</td><td>'+simFmtWan(b.p90)+'</td></tr>';
+    }
+    document.getElementById('simYearTable').innerHTML = html;
+  }
+
+  function simRecompute() {
+    if (!document.getElementById('simFan')) return;
+    const R = simRun();
+    simRenderTiles(R);
+    simRenderFan(R);
+    simRenderGlide(R);
+    simRenderTable(R);
+  }
+
+  window.renderPlanSim = function () {
+    if (!document.getElementById('simControls')) return;
+    if (!simBuilt) simBuildControls();
+    simRecompute();
+  };
+  document.addEventListener('DOMContentLoaded', function () {
+    try { window.renderPlanSim(); } catch (e) { console.warn('plan sim init:', e); }
+  });
+})();
 </script>
 </body>
 </html>
