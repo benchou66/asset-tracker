@@ -1275,11 +1275,37 @@
     <div style="font-family:var(--font-mono);font-size:0.7rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:16px;display:flex;align-items:center;gap:10px;">
       🎯 E50 總資產路徑檢核（年投 36 萬）
       <div style="flex:1;height:1px;background:var(--border);"></div>
-      <a href="e50-checkpoint.html" target="_blank" rel="noopener" style="font-size:0.6rem;color:var(--muted);text-decoration:none;">另開視窗 ↗</a>
     </div>
     <div class="panel">
-      <div class="panel-body" style="padding:0;">
-        <iframe src="e50-checkpoint.html" title="E50 總資產成長路徑檢核圖" style="width:100%;height:1500px;border:0;display:block;" loading="lazy"></iframe>
+      <div class="panel-body">
+        <div style="display:flex;flex-wrap:wrap;gap:14px;font-size:0.72rem;color:var(--muted);margin-bottom:10px;">
+          <span><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--accent);margin-right:5px;vertical-align:middle;"></span>實際總資產（自動快照＋手動紀錄）</span>
+          <span><span style="display:inline-block;width:14px;height:3px;border-radius:2px;background:var(--amber);margin-right:5px;vertical-align:middle;"></span>E50 路徑（指數 2030→80,000，含息 16.9%/年）</span>
+          <span><span style="display:inline-block;width:14px;height:3px;border-radius:2px;background:#1baf7a;margin-right:5px;vertical-align:middle;"></span>歷史均速 11.8%</span>
+          <span><span style="display:inline-block;width:14px;height:0;border-top:2px dashed var(--muted);margin-right:5px;vertical-align:middle;"></span>3,333 / 3,482 萬目標線</span>
+        </div>
+        <div class="sim-box" id="e50Box">
+          <svg id="e50Chart" viewBox="0 0 900 430" role="img" aria-label="E50 總資產成長路徑檢核圖"></svg>
+          <div class="sim-tip" id="e50Tip"></div>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;margin-top:14px;">
+          <div><label style="font-size:0.68rem;color:var(--muted);display:block;margin-bottom:3px;">日期</label>
+            <input type="date" id="e50Date" style="padding:7px 9px;border:1px solid var(--border);border-radius:8px;font-size:0.78rem;background:var(--surface2);color:var(--text);"></div>
+          <div style="flex:1;min-width:150px;"><label style="font-size:0.68rem;color:var(--muted);display:block;margin-bottom:3px;">總資產（元）</label>
+            <input type="number" id="e50Amount" placeholder="例：13901671" style="width:100%;padding:7px 9px;border:1px solid var(--border);border-radius:8px;font-size:0.78rem;background:var(--surface2);color:var(--text);font-family:var(--font-mono);"></div>
+          <div style="flex:1;min-width:130px;"><label style="font-size:0.68rem;color:var(--muted);display:block;margin-bottom:3px;">備註（可空）</label>
+            <input type="text" id="e50Note" placeholder="12/15 決策日" style="width:100%;padding:7px 9px;border:1px solid var(--border);border-radius:8px;font-size:0.78rem;background:var(--surface2);color:var(--text);"></div>
+          <button class="btn-sm" onclick="e50AddActual()" style="padding:8px 16px;">＋ 新增實際紀錄</button>
+        </div>
+        <details style="margin-top:14px;">
+          <summary style="cursor:pointer;font-size:0.78rem;font-weight:700;">年度檢核表（每年 12/15 決策日對照）</summary>
+          <div style="overflow-x:auto;margin-top:10px;"><table class="sim-table" id="e50Table"></table></div>
+        </details>
+        <div class="sim-note" style="margin-top:10px;">
+          口徑＝庫存總市值（E50 基準起點 2026/08/10 = 1,390 萬）。實際紀錄自動合併：<b>個股庫存歷史快照</b>（holdings_history）＋<b>資產記錄</b>（entries）＋當前庫存合計，同日以手動紀錄為準；上方表單寫入資產記錄，與總覽區共用同一份資料庫。
+          判讀：實際 ≥ E50 路徑 → ✓ E50 在軌（2031 提前退劇本活著）；介於兩線間 → △ E50 落後、基準劇本（2033 達標）仍在軌；低於 11.8% 線 → ✕ 雙雙落後。
+          E50 檢核點：<b>2026/12/31 加權指數須站上 50,000</b>，未達即依手冊作廢。單年偏離 ±15% 屬正常波動，連續兩個檢核日落後才有意義。教育性推算，非投資建議。
+        </div>
       </div>
     </div>
   </div>
@@ -3703,6 +3729,201 @@
   document.addEventListener('DOMContentLoaded', function () {
     try { window.renderPlanSim(); } catch (e) { console.warn('plan sim init:', e); }
   });
+})();
+</script>
+<script>
+/* ── E50 總資產路徑檢核面板（資料來源：Firebase entries + holdings_history + holdings） ── */
+(function(){
+  const V0 = 13901671, T0 = new Date(2026, 7, 10);
+  const R_E50 = Math.pow(80000/44928.76, 1/(143/365 + 4)) * 1.025 - 1;   // 16.89%
+  const R_HIST = 0.118, CONTRIB = 360000, INSURANCE = 2000000;
+  const GATE = 33330000, TARGET = 34820000, MS_Y = 365.25 * 864e5;
+  const END_E50 = new Date(2031, 11, 31), END_ALL = new Date(2034, 11, 31);
+
+  function buildCurve(rate, endDate){
+    const pts = [{ d: T0, v: V0 }];
+    let v = V0, d = new Date(T0);
+    while (d < endDate) {
+      let nd = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+      if (nd <= d) nd = new Date(d.getFullYear(), d.getMonth() + 2, 0);
+      v *= Math.pow(1 + rate, (nd - d) / MS_Y);
+      if (nd.getMonth() === 6 && nd.getFullYear() === 2030) v += INSURANCE;
+      if (nd.getMonth() === 11) v += CONTRIB;
+      pts.push({ d: nd, v });
+      d = nd;
+    }
+    return pts;
+  }
+  const e50C = buildCurve(R_E50, END_E50), histC = buildCurve(R_HIST, END_ALL);
+  const interp = (pts, date) => {
+    if (date <= pts[0].d) return pts[0].v;
+    for (let i = 1; i < pts.length; i++) if (pts[i].d >= date) {
+      const a = pts[i-1], b = pts[i], f = (date - a.d) / (b.d - a.d);
+      return a.v * Math.pow(b.v / a.v, f);
+    }
+    return null;
+  };
+  const wan = v => (v / 1e4).toLocaleString('zh-TW', { maximumFractionDigits: 0 });
+
+  let hhCache = null, hhAt = 0;
+  async function getActuals(){
+    const map = new Map();
+    try {
+      if (!hhCache || Date.now() - hhAt > 60000) { hhCache = (await window._fbGet('holdings_history')) || {}; hhAt = Date.now(); }
+      Object.values(hhCache).filter(v => v && v.date && v.total > 0)
+        .forEach(sn => map.set(sn.date, { date: sn.date, value: sn.total, src: '快照' }));
+    } catch(e) { console.warn('E50 讀取 holdings_history 失敗', e); }
+    try {
+      const snap = buildHoldingsSnapshot(holdings);
+      if (snap && snap.total > 0 && !map.has(snap.date)) map.set(snap.date, { date: snap.date, value: snap.total, src: '庫存' });
+    } catch(e) {}
+    (entries || []).forEach(en => { if (en && en.date && en.amount > 0) map.set(en.date, { date: en.date, value: en.amount, src: '手動' }); });
+    return [...map.values()].map(a => Object.assign({}, a, { d: new Date(a.date + 'T00:00:00') }))
+      .filter(a => !isNaN(+a.d)).sort((a, b) => a.d - b.d);
+  }
+  function judge(a){
+    if (a.d < T0) return null;
+    const eAt = a.d <= END_E50 ? interp(e50C, a.d) : null;
+    const hAt = interp(histC, a.d);
+    if (eAt && a.value >= eAt * 0.98) return { t: '✓ E50 在軌', c: '#047857', bg: 'rgba(5,150,105,0.12)' };
+    if (hAt && a.value >= hAt * 0.98) return { t: '△ E50 落後，基準在軌', c: '#b45309', bg: 'rgba(217,119,6,0.12)' };
+    return { t: '✕ 雙雙落後', c: '#dc2626', bg: 'rgba(220,38,38,0.10)' };
+  }
+
+  let lastActs = [];
+  window.renderE50 = async function(){
+    const svgEl = document.getElementById('e50Chart');
+    if (!svgEl) return;
+    const acts = await getActuals();
+    lastActs = acts;
+    const W = 900, H = 430, m = { l: 60, r: 14, t: 16, b: 30 };
+    const X0 = new Date(Math.min(acts.length ? +acts[0].d : +T0, +T0) - 45 * 864e5);
+    const X1 = END_ALL;
+    const minAct = acts.reduce((mm, a) => Math.min(mm, a.value), V0);
+    const Y0 = Math.min(12e6, Math.floor(minAct * 0.9 / 1e6) * 1e6), Y1 = 46e6;
+    const xs = d => m.l + (d - X0) / (X1 - X0) * (W - m.l - m.r);
+    const ys = v => H - m.b - (v - Y0) / (Y1 - Y0) * (H - m.t - m.b);
+    const cs = getComputedStyle(document.documentElement);
+    const cMuted = cs.getPropertyValue('--muted').trim() || '#64748b';
+    const cBorder = cs.getPropertyValue('--border').trim() || '#dde3ec';
+    const cAccent = cs.getPropertyValue('--accent').trim() || '#2563eb';
+    const cAmber = cs.getPropertyValue('--amber').trim() || '#d97706';
+    const cText = cs.getPropertyValue('--text').trim() || '#1e293b';
+    let g = '';
+    const yStep = 5e6, yFirst = Math.ceil(Y0 / yStep) * yStep;
+    for (let v = yFirst; v <= Y1; v += yStep) {
+      g += '<line x1="' + m.l + '" y1="' + ys(v) + '" x2="' + (W - m.r) + '" y2="' + ys(v) + '" stroke="' + cBorder + '" stroke-width="1"/>';
+      g += '<text x="' + (m.l - 8) + '" y="' + (ys(v) + 4) + '" text-anchor="end" font-size="12" fill="' + cMuted + '">' + (v / 1e4).toLocaleString() + '</text>';
+    }
+    for (let y = X0.getFullYear() + 1; y <= 2035; y++) {
+      const x = xs(new Date(y, 0, 1));
+      if (x < m.l || x > W - m.r) continue;
+      g += '<line x1="' + x + '" y1="' + m.t + '" x2="' + x + '" y2="' + (H - m.b) + '" stroke="' + cBorder + '" stroke-width="1"/>';
+      const xNext = Math.min(xs(new Date(y + 1, 0, 1)), W - m.r);
+      if (y <= 2034 && xNext - x > 34) g += '<text x="' + ((x + xNext) / 2) + '" y="' + (H - m.b + 20) + '" text-anchor="middle" font-size="12" fill="' + cMuted + '">' + y + '</text>';
+    }
+    g += '<line x1="' + m.l + '" y1="' + (H - m.b) + '" x2="' + (W - m.r) + '" y2="' + (H - m.b) + '" stroke="' + cMuted + '" stroke-width="1" opacity="0.5"/>';
+    [[GATE, '3,333 萬（E50 開領門檻）'], [TARGET, '3,482 萬（目標）']].forEach(function(tl){
+      g += '<line x1="' + m.l + '" y1="' + ys(tl[0]) + '" x2="' + (W - m.r) + '" y2="' + ys(tl[0]) + '" stroke="' + cMuted + '" stroke-width="1.5" stroke-dasharray="6 5"/>';
+      g += '<text x="' + (W - m.r - 4) + '" y="' + (ys(tl[0]) - 5) + '" text-anchor="end" font-size="12" fill="' + cText + '">' + tl[1] + '</text>';
+    });
+    const xChk = xs(new Date(2026, 11, 31));
+    g += '<line x1="' + xChk + '" y1="' + m.t + '" x2="' + xChk + '" y2="' + (H - m.b) + '" stroke="' + cMuted + '" stroke-width="1" stroke-dasharray="3 4"/>';
+    g += '<text x="' + (xChk + 4) + '" y="' + (m.t + 12) + '" font-size="11" fill="' + cMuted + '">2026/12 檢核：指數 50,000</text>';
+    const path = (pts, from, to) => pts.filter(p => p.d >= from && p.d <= to)
+      .map((p, i) => (i ? 'L' : 'M') + xs(p.d).toFixed(1) + ',' + ys(p.v).toFixed(1)).join('');
+    g += '<path d="' + path(histC, T0, END_ALL) + '" fill="none" stroke="#1baf7a" stroke-width="2"/>';
+    g += '<path d="' + path(e50C, T0, new Date(2030, 11, 31)) + '" fill="none" stroke="' + cAmber + '" stroke-width="2"/>';
+    g += '<path d="' + path(e50C, new Date(2030, 11, 31), END_E50) + '" fill="none" stroke="' + cAmber + '" stroke-width="2" stroke-dasharray="5 5"/>';
+    const pe = e50C[e50C.length - 1], ph = histC[histC.length - 1];
+    g += '<text x="' + Math.min(xs(pe.d) - 4, W - m.r - 4) + '" y="' + (ys(pe.v) - 8) + '" text-anchor="end" font-size="12" fill="' + cAmber + '">E50（延伸）</text>';
+    g += '<text x="' + (W - m.r - 4) + '" y="' + (ys(ph.v) + 18) + '" text-anchor="end" font-size="12" fill="#0e8a60">11.8% 基準</text>';
+    let ap = '';
+    acts.forEach(function(a, i){ ap += (i ? 'L' : 'M') + xs(a.d).toFixed(1) + ',' + ys(a.value).toFixed(1); });
+    if (acts.length > 1) g += '<path d="' + ap + '" fill="none" stroke="' + cAccent + '" stroke-width="2"/>';
+    acts.forEach(function(a){
+      g += '<circle cx="' + xs(a.d) + '" cy="' + ys(a.value) + '" r="4.5" fill="' + cAccent + '" stroke="#ffffff" stroke-width="1.8"/>';
+    });
+    if (acts.length) {
+      const a = acts[acts.length - 1];
+      g += '<text x="' + Math.min(xs(a.d) + 8, W - 90) + '" y="' + (ys(a.value) + 4) + '" font-size="12.5" font-weight="700" fill="' + cText + '">' + wan(a.value) + ' 萬</text>';
+    }
+    g += '<line id="e50Xh" x1="0" y1="' + m.t + '" x2="0" y2="' + (H - m.b) + '" stroke="' + cText + '" stroke-width="1" opacity="0"/>';
+    svgEl.innerHTML = g;
+    wireE50Hover(X0, X1, m, W);
+    buildE50Table(acts);
+  };
+
+  function wireE50Hover(X0, X1, m, W){
+    const svgEl = document.getElementById('e50Chart'), tip = document.getElementById('e50Tip');
+    const xh = function(){ return document.getElementById('e50Xh'); };
+    svgEl.onmousemove = function(ev){
+      const r = svgEl.getBoundingClientRect();
+      const vx = (ev.clientX - r.left) / r.width * W;
+      if (vx < m.l || vx > W - m.r) { tip.style.display = 'none'; const h1 = xh(); if (h1) h1.setAttribute('opacity', 0); return; }
+      const date = new Date(+X0 + (vx - m.l) / (W - m.l - m.r) * (X1 - X0));
+      const ym = date.getFullYear() + '/' + String(date.getMonth() + 1).padStart(2, '0');
+      const vE = date >= T0 && date <= END_E50 ? interp(e50C, date) : null;
+      const vH = date >= T0 ? interp(histC, date) : null;
+      const act = lastActs.find(a => a.d.getFullYear() === date.getFullYear() && a.d.getMonth() === date.getMonth());
+      let html = '<div class="tt">' + ym + '</div>';
+      if (act) html += '<div><span style="color:var(--accent)">●</span> 實際 <b>' + wan(act.value) + ' 萬</b>（' + act.src + '）</div>';
+      if (vE) html += '<div><span style="color:var(--amber)">●</span> E50 <b>' + wan(vE) + ' 萬</b></div>';
+      if (vH) html += '<div><span style="color:#1baf7a">●</span> 11.8% <b>' + wan(vH) + ' 萬</b></div>';
+      tip.innerHTML = html;
+      tip.style.display = 'block';
+      const bx = vx / W * r.width;
+      tip.style.left = Math.min(bx + 14, r.width - tip.offsetWidth - 6) + 'px';
+      tip.style.top = '14px';
+      const h = xh(); if (h) { h.setAttribute('x1', vx); h.setAttribute('x2', vx); h.setAttribute('opacity', 0.4); }
+    };
+    svgEl.onmouseleave = function(){ tip.style.display = 'none'; const h = xh(); if (h) h.setAttribute('opacity', 0); };
+  }
+
+  function buildE50Table(acts){
+    const tbl = document.getElementById('e50Table');
+    if (!tbl) return;
+    let rows = '<tr><th>檢核日</th><th>E50 路徑（萬）</th><th>對應指數</th><th>11.8% 基準（萬）</th><th>實際（萬）</th><th style="text-align:left;">狀態</th></tr>';
+    for (let y = 2026; y <= 2034; y++) {
+      const d = new Date(y, 11, 15);
+      const vE = d <= END_E50 ? interp(e50C, d) : null;
+      const vH = interp(histC, d);
+      const idxE = d <= END_E50 ? 44928.76 * Math.pow((1 + R_E50) / 1.025, (d - T0) / MS_Y) : null;
+      const inY = acts.filter(a => a.d.getFullYear() === y && a.d >= T0);
+      const act = inY.length ? inY[inY.length - 1] : null;
+      const st = act ? judge(act) : null;
+      rows += '<tr><td>' + y + '/12/15</td><td>' + (vE ? wan(vE) : '—') + '</td><td>' + (idxE ? Math.round(idxE).toLocaleString() : '—') + '</td><td>' + wan(vH) + '</td>'
+        + '<td>' + (act ? '<b>' + wan(act.value) + '</b><span style="color:var(--muted);font-size:0.68rem;"> ' + act.date + '（' + act.src + '）</span>' : '—') + '</td>'
+        + '<td style="text-align:left;">' + (st ? '<span style="display:inline-block;padding:1px 8px;border-radius:10px;font-size:0.7rem;background:' + st.bg + ';color:' + st.c + ';">' + st.t + '</span>' : '—') + '</td></tr>';
+    }
+    tbl.innerHTML = rows;
+  }
+
+  window.e50AddActual = async function(){
+    const date = document.getElementById('e50Date').value;
+    const amt = parseFloat(document.getElementById('e50Amount').value);
+    const note = (document.getElementById('e50Note').value || '').trim() || 'E50 檢核紀錄';
+    if (!date || !(amt > 0)) { showToast('⚠ 請輸入日期與金額'); return; }
+    const rec = { date: date, amount: Math.round(amt), note: note };
+    const i = entries.findIndex(e => e.date === date);
+    if (i >= 0) entries[i] = rec; else entries.push(rec);
+    entries.sort((a, b) => a.date.localeCompare(b.date));
+    await dbSaveEntries();
+    addLog('add', 'E50 面板新增實際紀錄：' + date + ' NT$ ' + rec.amount.toLocaleString());
+    showToast('✓ 已新增實際紀錄 ' + date);
+    document.getElementById('e50Amount').value = '';
+    document.getElementById('e50Note').value = '';
+    render();
+    if (typeof renderAnalytics === 'function') renderAnalytics();
+  };
+
+  // render() 之後自動刷新 E50 面板(登入載入與每次資料異動都會經過 render)
+  if (typeof render === 'function') {
+    const prev = render;
+    render = function(){ prev(); try { renderE50(); } catch(e) { console.warn('renderE50:', e); } };
+  }
+  const dEl = document.getElementById('e50Date');
+  if (dEl) dEl.value = new Date().toISOString().slice(0, 10);
 })();
 </script>
 </body>
