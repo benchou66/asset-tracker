@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>E50 總資產成長路徑檢核圖(年投 36 萬)</title>
+<style>
+:root {
+  color-scheme: light;
+  --surface-1: #fcfcfb; --page: #f9f9f7;
+  --ink-1: #0b0b0b; --ink-2: #52514e; --muted: #898781;
+  --grid: #e1e0d9; --axis: #c3c2b7; --border: rgba(11,11,11,0.10);
+  --s-actual: #2a78d6;   /* 實際 */
+  --s-e50: #eb6834;      /* E50 路徑 */
+  --s-hist: #1baf7a;     /* 歷史均速 11.8% */
+  --st-good: #0ca30c; --st-warn: #fab219; --st-crit: #d03b3b;
+  --good-text: #006300;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --surface-1: #1a1a19; --page: #0d0d0d;
+    --ink-1: #ffffff; --ink-2: #c3c2b7; --muted: #898781;
+    --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,0.10);
+    --s-actual: #3987e5; --s-e50: #d95926; --s-hist: #199e70;
+    --good-text: #0ca30c;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --surface-1: #1a1a19; --page: #0d0d0d;
+  --ink-1: #ffffff; --ink-2: #c3c2b7; --muted: #898781;
+  --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,0.10);
+  --s-actual: #3987e5; --s-e50: #d95926; --s-hist: #199e70;
+  --good-text: #0ca30c;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; padding: 20px 14px 40px; background: var(--page); color: var(--ink-1);
+  font: 15px/1.6 system-ui, -apple-system, "Segoe UI", "Microsoft JhengHei", sans-serif;
+}
+.wrap { max-width: 980px; margin: 0 auto; }
+h1 { font-size: 1.25rem; margin: 0 0 4px; }
+.sub { color: var(--ink-2); font-size: 0.85rem; margin: 0 0 14px; }
+.card {
+  background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px;
+  padding: 16px 18px; margin-bottom: 16px;
+}
+.topbar { display: flex; justify-content: space-between; align-items: start; gap: 10px; }
+button#themeBtn {
+  background: none; border: 1px solid var(--border); border-radius: 8px; color: var(--ink-2);
+  padding: 4px 10px; cursor: pointer; font-size: 0.8rem;
+}
+.legend { display: flex; flex-wrap: wrap; gap: 16px; margin: 6px 0 2px; font-size: 0.82rem; color: var(--ink-2); }
+.legend .sw { display: inline-block; width: 14px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 6px; }
+.legend .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; vertical-align: middle; margin-right: 6px; }
+#chartBox { position: relative; }
+#tip {
+  position: absolute; pointer-events: none; display: none; z-index: 5;
+  background: var(--surface-1); border: 1px solid var(--border); border-radius: 8px;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.18); padding: 8px 11px; font-size: 0.78rem; line-height: 1.5;
+  color: var(--ink-2); white-space: nowrap;
+}
+#tip b { color: var(--ink-1); font-variant-numeric: tabular-nums; }
+table { border-collapse: collapse; width: 100%; font-size: 0.83rem; }
+th, td { padding: 6px 8px; text-align: right; border-bottom: 1px solid var(--grid); font-variant-numeric: tabular-nums; }
+th { color: var(--muted); font-weight: 600; }
+th:first-child, td:first-child { text-align: left; }
+.chip { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 0.76rem; white-space: nowrap; }
+.note { color: var(--muted); font-size: 0.78rem; margin-top: 10px; }
+.scroll-x { overflow-x: auto; }
+svg text { font-family: inherit; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <div>
+      <h1>E50 總資產成長路徑檢核圖</h1>
+      <p class="sub">年投 36 萬 + 2030/7 保險金 200 萬|口徑 = <b>庫存總市值</b>(引擎 + 第二線防禦,不含現金緩衝)|起點 2026/08/10 = 1,390 萬</p>
+    </div>
+    <button id="themeBtn">深/淺色</button>
+  </div>
+
+  <div class="card">
+    <div class="legend">
+      <span><span class="dot" style="background:var(--s-actual)"></span>實際總資產(逐筆記錄)</span>
+      <span><span class="sw" style="background:var(--s-e50)"></span>E50 路徑(指數 2030 → 80,000,含息 16.9%/年)</span>
+      <span><span class="sw" style="background:var(--s-hist)"></span>歷史均速路徑(11.8%/年)</span>
+      <span><span class="sw" style="background:var(--muted);height:0;border-top:2px dashed var(--muted)"></span>目標線 3,333 / 3,482 萬</span>
+    </div>
+    <div id="chartBox"><div id="tip"></div></div>
+  </div>
+
+  <div class="card">
+    <details open>
+      <summary style="cursor:pointer">年度檢核表(每年 12/15 決策日對照)</summary>
+      <div class="scroll-x" style="margin-top:10px"><table id="ckTable"></table></div>
+      <div class="note">
+        判讀:實際 ≥ E50 路徑 → E50 在軌(2031 提前退劇本活著);介於兩線之間 → E50 落後、基準劇本(2033 達標)仍在軌;低於 11.8% 線 → 雙雙落後,回歸 v3 本則時程。單一年份偏離 ±15% 屬正常波動,連續兩個檢核日落後才有意義。<br>
+        E50 檢核點:<b>2026/12/31 加權指數須站上 50,000</b>(等速路徑年底約 47,300,站上 50,000 代表超前);未達 → E50 作廢(手冊規則)。門檻 3,333 萬與目標 3,482 萬在手冊為「引擎」口徑,本圖用庫存總市值方便對帳,兩者差約 = 防禦部位市值(今日約 107 萬),判讀時實際數字可先減去防禦部位再比目標線。
+      </div>
+    </details>
+  </div>
+
+  <div class="card">
+    <b style="font-size:0.9rem">如何每年更新</b>
+    <div class="note" style="margin-top:4px">
+      用文字編輯器打開本檔,找到 <code>const ACTUALS</code>,照格式加一行當日庫存總市值(建議每年 12/15 決策日與 6/30 各記一筆),存檔重開即可。歷史紀錄都保留在檔案裡,圖與檢核表會自動重算。
+    </div>
+  </div>
+
+  <p class="note">本圖為教育性推算(等速路徑為中位劇本時間表,非保證),非個人化投資建議。E50 為手冊 v3 附錄八之參考情境;規則修訂僅得於 5 年檢視點進行。</p>
+</div>
+
+<script>
+'use strict';
+/* ═══════════ 每年在這裡加一筆實際數字 ═══════════ */
+const ACTUALS = [
+  { date: '2026-08-10', value: 13901671, note: '起點(手冊 v3 定稿)' },
+  // { date: '2026-12-15', value: 0, note: '決策日' },  ← 照這個格式加,value 填庫存總市值(元)
+];
+/* ═══════════════════════════════════════════════ */
+
+const V0 = 13901671, T0 = new Date(2026, 7, 10);
+const R_E50 = Math.pow(80000/44928.76, 1/(143/365 + 4)) * 1.025 - 1;  // 16.89%
+const R_HIST = 0.118;
+const CONTRIB = 360000, INSURANCE = 2000000;
+const GATE = 33330000, TARGET = 34820000;
+const MS_Y = 365.25 * 864e5;
+const END_E50 = new Date(2031, 11, 31), END_ALL = new Date(2034, 11, 31);
+
+function buildCurve(rate, endDate) {
+  const pts = [{ d: T0, v: V0 }];
+  let v = V0, d = new Date(T0);
+  while (d < endDate) {
+    const next = new Date(d.getFullYear(), d.getMonth() + 1, 0);   // 當月最後一天
+    const nd = next > d ? next : new Date(d.getFullYear(), d.getMonth() + 2, 0);
+    v *= Math.pow(1 + rate, (nd - d) / MS_Y);
+    if (nd.getMonth() === 6 && nd.getFullYear() === 2030) v += INSURANCE;
+    if (nd.getMonth() === 11) v += CONTRIB;
+    pts.push({ d: nd, v });
+    d = nd;
+  }
+  return pts;
+}
+const e50 = buildCurve(R_E50, END_E50);
+const hist = buildCurve(R_HIST, END_ALL);
+const interp = (pts, date) => {
+  if (date <= pts[0].d) return pts[0].v;
+  for (let i = 1; i < pts.length; i++) if (pts[i].d >= date) {
+    const a = pts[i-1], b = pts[i], f = (date - a.d) / (b.d - a.d);
+    return a.v * Math.pow(b.v / a.v, f);
+  }
+  return null;
+};
+const actuals = ACTUALS.filter(a => a.value > 0).map(a => ({ ...a, d: new Date(a.date) }));
+const wan = v => (v / 1e4).toLocaleString('zh-TW', { maximumFractionDigits: 0 });
+
+/* ---------- 圖 ---------- */
+const box = document.getElementById('chartBox');
+const X0 = T0, X1 = END_ALL;
+const Y0 = 12e6, Y1 = 46e6;
+let geom = null;
+
+function draw() {
+  const W = Math.max(560, box.clientWidth), H = Math.min(430, Math.max(300, W * 0.44));
+  const m = { l: 52, r: 16, t: 14, b: 30 };
+  const xs = d => m.l + (d - X0) / (X1 - X0) * (W - m.l - m.r);
+  const ys = v => H - m.b - (v - Y0) / (Y1 - Y0) * (H - m.t - m.b);
+  geom = { xs, ys, W, H, m };
+  const css = k => getComputedStyle(document.documentElement).getPropertyValue(k).trim();
+  let s = `<svg id="chart" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="E50 總資產成長路徑檢核圖">`;
+
+  for (let v = 15e6; v <= Y1; v += 5e6) {
+    s += `<line x1="${m.l}" y1="${ys(v)}" x2="${W - m.r}" y2="${ys(v)}" stroke="${css('--grid')}" stroke-width="1"/>`;
+    s += `<text x="${m.l - 8}" y="${ys(v) + 4}" text-anchor="end" font-size="11" fill="${css('--muted')}">${(v/1e4).toLocaleString()}</text>`;
+  }
+  for (let y = 2027; y <= 2035; y++) {
+    const x = xs(new Date(y, 0, 1));
+    s += `<line x1="${x}" y1="${m.t}" x2="${x}" y2="${H - m.b}" stroke="${css('--grid')}" stroke-width="1"/>`;
+    if (y < 2035) s += `<text x="${x + (xs(new Date(y+1,0,1)) - x)/2}" y="${H - m.b + 18}" text-anchor="middle" font-size="11" fill="${css('--muted')}">${y}</text>`;
+  }
+  s += `<text x="${(xs(new Date(2027,0,1)) + m.l)/2}" y="${H - m.b + 18}" text-anchor="middle" font-size="11" fill="${css('--muted')}">2026</text>`;
+  s += `<line x1="${m.l}" y1="${H - m.b}" x2="${W - m.r}" y2="${H - m.b}" stroke="${css('--axis')}" stroke-width="1"/>`;
+
+  for (const [val, label] of [[GATE, '3,333 萬(E50 開領門檻)'], [TARGET, '3,482 萬(目標)']]) {
+    s += `<line x1="${m.l}" y1="${ys(val)}" x2="${W - m.r}" y2="${ys(val)}" stroke="${css('--muted')}" stroke-width="1.5" stroke-dasharray="6 5"/>`;
+    s += `<text x="${W - m.r - 4}" y="${ys(val) - 5}" text-anchor="end" font-size="11" fill="${css('--ink-2')}">${label}</text>`;
+  }
+  const xChk = xs(new Date(2026, 11, 31));
+  s += `<line x1="${xChk}" y1="${m.t}" x2="${xChk}" y2="${H - m.b}" stroke="${css('--muted')}" stroke-width="1" stroke-dasharray="3 4"/>`;
+  s += `<text x="${xChk + 4}" y="${m.t + 12}" font-size="10.5" fill="${css('--muted')}">2026/12 檢核:指數 50,000</text>`;
+
+  const path = (pts, from, to) => pts.filter(p => p.d >= from && p.d <= to)
+    .map((p, i) => `${i ? 'L' : 'M'}${xs(p.d).toFixed(1)},${ys(p.v).toFixed(1)}`).join('');
+  s += `<path d="${path(hist, T0, END_ALL)}" fill="none" stroke="${css('--s-hist')}" stroke-width="2"/>`;
+  s += `<path d="${path(e50, T0, new Date(2030,11,31))}" fill="none" stroke="${css('--s-e50')}" stroke-width="2"/>`;
+  s += `<path d="${path(e50, new Date(2030,11,31), END_E50)}" fill="none" stroke="${css('--s-e50')}" stroke-width="2" stroke-dasharray="5 5"/>`;
+
+  const lbl = (pts, name, color, dy) => {
+    const p = pts[pts.length - 1];
+    s += `<text x="${Math.min(xs(p.d) + 6, W - m.r - 2)}" y="${ys(p.v) + dy}" font-size="11" fill="${css('--ink-2')}" text-anchor="${xs(p.d) > W - 120 ? 'end' : 'start'}"><tspan fill="${color}">●</tspan> ${name}</text>`;
+  };
+  lbl(e50, 'E50(延伸)', css('--s-e50'), -8);
+  lbl(hist, '11.8% 基準', css('--s-hist'), 14);
+
+  let ap = '';
+  actuals.forEach((a, i) => {
+    ap += (i ? 'L' : 'M') + xs(a.d).toFixed(1) + ',' + ys(a.value).toFixed(1);
+    s += `<circle cx="${xs(a.d)}" cy="${ys(a.value)}" r="4.5" fill="${css('--s-actual')}" stroke="${css('--surface-1')}" stroke-width="2"/>`;
+  });
+  if (actuals.length > 1) s += `<path d="${ap}" fill="none" stroke="${css('--s-actual')}" stroke-width="2"/>`;
+  if (actuals.length) {
+    const a = actuals[actuals.length - 1];
+    s += `<text x="${xs(a.d) + 8}" y="${ys(a.value) + 4}" font-size="11" fill="${css('--ink-1')}" font-weight="600">${wan(a.value)} 萬</text>`;
+  }
+  s += `<line id="xh" x1="0" y1="${m.t}" x2="0" y2="${H - m.b}" stroke="${css('--ink-2')}" stroke-width="1" opacity="0"/>`;
+  s += '</svg>';
+  box.innerHTML = '<div id="tip"></div>' + s;
+  wireHover();
+}
+
+function wireHover() {
+  const svg = document.getElementById('chart'), tip = document.getElementById('tip'), xh = document.getElementById('xh');
+  const { xs, ys, W, m } = geom;
+  svg.addEventListener('mousemove', ev => {
+    const r = svg.getBoundingClientRect(), px = ev.clientX - r.left;
+    if (px < m.l || px > W - m.r) { tip.style.display = 'none'; xh.setAttribute('opacity', 0); return; }
+    const date = new Date(+X0 + (px - m.l) / (W - m.l - m.r) * (X1 - X0));
+    const ym = `${date.getFullYear()}/${String(date.getMonth() + 1).padStart(2, '0')}`;
+    const vE = date <= END_E50 ? interp(e50, date) : null;
+    const vH = interp(hist, date);
+    const act = actuals.find(a => a.d.getFullYear() === date.getFullYear() && a.d.getMonth() === date.getMonth());
+    let html = `<b>${ym}</b><br>`;
+    if (act) html += `<span style="color:var(--s-actual)">●</span> 實際 <b>${wan(act.value)} 萬</b><br>`;
+    if (vE) html += `<span style="color:var(--s-e50)">●</span> E50 路徑 <b>${wan(vE)} 萬</b><br>`;
+    html += `<span style="color:var(--s-hist)">●</span> 11.8% 基準 <b>${wan(vH)} 萬</b>`;
+    tip.innerHTML = html;
+    tip.style.display = 'block';
+    const bw = tip.offsetWidth;
+    tip.style.left = Math.min(px + 14, W - bw - 6) + 'px';
+    tip.style.top = '18px';
+    xh.setAttribute('x1', px); xh.setAttribute('x2', px); xh.setAttribute('opacity', 0.45);
+  });
+  svg.addEventListener('mouseleave', () => { tip.style.display = 'none'; xh.setAttribute('opacity', 0); });
+}
+
+/* ---------- 年度檢核表 ---------- */
+function buildTable() {
+  const rows = [];
+  for (let y = 2026; y <= 2034; y++) {
+    const d = new Date(y, 11, 15);
+    const vE = d <= END_E50 ? interp(e50, d) : null;
+    const vH = interp(hist, d);
+    const idxE = d <= END_E50 ? 44928.76 * Math.pow((1 + R_E50) / 1.025, (d - T0) / MS_Y) : null;
+    const inYear = actuals.filter(a => a.d.getFullYear() === y);
+    const act = inYear.length ? inYear[inYear.length - 1] : null;
+    let status = '—';
+    if (act) {
+      // 用實際紀錄「當日」的路徑內插值來比,不受紀錄日期偏離 12/15 影響
+      const eAt = act.d <= END_E50 ? interp(e50, act.d) : null;
+      const hAt = interp(hist, act.d);
+      if (eAt && act.value >= eAt * 0.98) status = `<span class="chip" style="background:color-mix(in srgb, var(--st-good) 15%, transparent);color:var(--good-text)">✓ E50 在軌</span>`;
+      else if (act.value >= hAt * 0.98) status = `<span class="chip" style="background:color-mix(in srgb, var(--st-warn) 18%, transparent);color:var(--ink-1)">△ E50 落後,基準在軌</span>`;
+      else status = `<span class="chip" style="background:color-mix(in srgb, var(--st-crit) 15%, transparent);color:var(--st-crit)">✕ 雙雙落後</span>`;
+    }
+    rows.push(`<tr><td>${y}/12/15</td><td>${vE ? wan(vE) : '—'}</td><td>${idxE ? Math.round(idxE).toLocaleString() : '—'}</td><td>${wan(vH)}</td><td>${act ? `<b>${wan(act.value)}</b><span style="color:var(--muted);font-size:0.75rem"> (${act.date})</span>` : '—'}</td><td style="text-align:left">${status}</td></tr>`);
+  }
+  document.getElementById('ckTable').innerHTML =
+    `<tr><th>檢核日</th><th>E50 路徑(萬)</th><th>對應指數</th><th>11.8% 基準(萬)</th><th>實際(萬)</th><th style="text-align:left">狀態</th></tr>` + rows.join('');
+}
+
+/* ---------- 主題切換 ---------- */
+document.getElementById('themeBtn').addEventListener('click', () => {
+  const el = document.documentElement;
+  const dark = getComputedStyle(el).colorScheme.includes('dark');
+  el.setAttribute('data-theme', dark ? 'light' : 'dark');
+  draw();
+});
+
+draw(); buildTable();
+addEventListener('resize', draw);
+</script>
+</body>
+</html>
