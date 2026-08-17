@@ -1279,7 +1279,7 @@
     <div class="panel">
       <div class="panel-body">
         <div style="display:flex;flex-wrap:wrap;gap:14px;font-size:0.72rem;color:var(--muted);margin-bottom:10px;">
-          <span><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--accent);margin-right:5px;vertical-align:middle;"></span>實際總資產（自動快照＋手動紀錄）</span>
+          <span><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--accent);margin-right:5px;vertical-align:middle;"></span>實際總資產月線（淡點＝原始紀錄）</span>
           <span><span style="display:inline-block;width:14px;height:3px;border-radius:2px;background:var(--amber);margin-right:5px;vertical-align:middle;"></span>E50 路徑（指數 2030→80,000，含息 16.9%/年）</span>
           <span><span style="display:inline-block;width:14px;height:3px;border-radius:2px;background:#1baf7a;margin-right:5px;vertical-align:middle;"></span>歷史均速 11.8%</span>
           <span><span style="display:inline-block;width:14px;height:0;border-top:2px dashed var(--muted);margin-right:5px;vertical-align:middle;"></span>3,333 / 3,482 萬目標線</span>
@@ -1302,7 +1302,7 @@
           <div style="overflow-x:auto;margin-top:10px;"><table class="sim-table" id="e50Table"></table></div>
         </details>
         <div class="sim-note" style="margin-top:10px;">
-          口徑＝庫存總市值（E50 基準起點 2026/08/10 = 1,390 萬）。實際紀錄自動合併：<b>個股庫存歷史快照</b>（holdings_history）＋<b>資產記錄</b>（entries）＋當前庫存合計，同日以手動紀錄為準；上方表單寫入資產記錄，與總覽區共用同一份資料庫。
+          口徑＝庫存總市值（E50 基準起點 2026/08/10 = 1,390 萬）。實際紀錄自動合併：<b>個股庫存歷史快照</b>（holdings_history）＋<b>資產記錄</b>（entries）＋當前庫存合計，同日以手動紀錄為準；上方表單寫入資產記錄，與總覽區共用同一份資料庫。圖以每月最後一筆畫月線，其餘原始紀錄為淡點；與鄰近紀錄中位數偏離逾 ±15% 的自動快照視為改到一半的中間態，自動濾除（手動紀錄一律保留），滑鼠移入可見各月筆數。
           判讀：實際 ≥ E50 路徑 → ✓ E50 在軌（2031 提前退劇本活著）；介於兩線間 → △ E50 落後、基準劇本（2033 達標）仍在軌；低於 11.8% 線 → ✕ 雙雙落後。
           E50 檢核點：<b>2026/12/31 加權指數須站上 50,000</b>，未達即依手冊作廢。單年偏離 ±15% 屬正常波動，連續兩個檢核日落後才有意義。教育性推算，非投資建議。
         </div>
@@ -3790,12 +3790,31 @@
     return { t: '✕ 雙雙落後', c: '#dc2626', bg: 'rgba(220,38,38,0.10)' };
   }
 
-  let lastActs = [];
+  let lastAz = { clean: [], dropped: [], monthly: [] };
+  function analyzeActuals(acts){
+    const clean = [], dropped = [];
+    acts.forEach(function(a, i){
+      if (a.src === '快照' || a.src === '庫存') {
+        const nb = [];
+        for (let k = Math.max(0, i - 2); k <= Math.min(acts.length - 1, i + 2); k++) if (k !== i) nb.push(acts[k].value);
+        if (nb.length >= 2) {
+          nb.sort(function(x, y){ return x - y; });
+          const med = nb.length % 2 ? nb[(nb.length - 1) / 2] : (nb[nb.length / 2 - 1] + nb[nb.length / 2]) / 2;
+          if (Math.abs(a.value - med) / med > 0.15) { dropped.push(a); return; }
+        }
+      }
+      clean.push(a);
+    });
+    const byMonth = new Map();
+    clean.forEach(function(a){ byMonth.set(a.date.slice(0, 7), a); });
+    return { clean: clean, dropped: dropped, monthly: Array.from(byMonth.values()) };
+  }
   window.renderE50 = async function(){
     const svgEl = document.getElementById('e50Chart');
     if (!svgEl) return;
-    const acts = await getActuals();
-    lastActs = acts;
+    const az = analyzeActuals(await getActuals());
+    lastAz = az;
+    const acts = az.monthly;
     const W = 900, H = 430, m = { l: 60, r: 14, t: 16, b: 30 };
     const X0 = new Date(Math.min(acts.length ? +acts[0].d : +T0, +T0) - 45 * 864e5);
     const X1 = END_ALL;
@@ -3838,6 +3857,11 @@
     const pe = e50C[e50C.length - 1], ph = histC[histC.length - 1];
     g += '<text x="' + Math.min(xs(pe.d) - 4, W - m.r - 4) + '" y="' + (ys(pe.v) - 8) + '" text-anchor="end" font-size="12" fill="' + cAmber + '">E50（延伸）</text>';
     g += '<text x="' + (W - m.r - 4) + '" y="' + (ys(ph.v) + 18) + '" text-anchor="end" font-size="12" fill="#0e8a60">11.8% 基準</text>';
+    const repSet = new Set(acts.map(function(a){ return a.date; }));
+    az.clean.forEach(function(a){
+      if (repSet.has(a.date)) return;
+      g += '<circle cx="' + xs(a.d) + '" cy="' + ys(a.value) + '" r="3" fill="' + cAccent + '" opacity="0.22"/>';
+    });
     let ap = '';
     acts.forEach(function(a, i){ ap += (i ? 'L' : 'M') + xs(a.d).toFixed(1) + ',' + ys(a.value).toFixed(1); });
     if (acts.length > 1) g += '<path d="' + ap + '" fill="none" stroke="' + cAccent + '" stroke-width="2"/>';
@@ -3851,7 +3875,7 @@
     g += '<line id="e50Xh" x1="0" y1="' + m.t + '" x2="0" y2="' + (H - m.b) + '" stroke="' + cText + '" stroke-width="1" opacity="0"/>';
     svgEl.innerHTML = g;
     wireE50Hover(X0, X1, m, W);
-    buildE50Table(acts);
+    buildE50Table(az.clean);
   };
 
   function wireE50Hover(X0, X1, m, W){
@@ -3865,9 +3889,12 @@
       const ym = date.getFullYear() + '/' + String(date.getMonth() + 1).padStart(2, '0');
       const vE = date >= T0 && date <= END_E50 ? interp(e50C, date) : null;
       const vH = date >= T0 ? interp(histC, date) : null;
-      const act = lastActs.find(a => a.d.getFullYear() === date.getFullYear() && a.d.getMonth() === date.getMonth());
+      const mKey = date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0');
+      const act = lastAz.monthly.find(function(a){ return a.date.slice(0, 7) === mKey; });
+      const nRaw = lastAz.clean.filter(function(a){ return a.date.slice(0, 7) === mKey; }).length;
+      const nDrop = lastAz.dropped.filter(function(a){ return a.date.slice(0, 7) === mKey; }).length;
       let html = '<div class="tt">' + ym + '</div>';
-      if (act) html += '<div><span style="color:var(--accent)">●</span> 實際 <b>' + wan(act.value) + ' 萬</b>（' + act.src + '）</div>';
+      if (act) html += '<div><span style="color:var(--accent)">●</span> 實際 <b>' + wan(act.value) + ' 萬</b>（' + act.date.slice(5) + ' ' + act.src + (nRaw > 1 ? '，本月 ' + nRaw + ' 筆' : '') + (nDrop ? '，濾除 ' + nDrop + ' 筆' : '') + '）</div>';
       if (vE) html += '<div><span style="color:var(--amber)">●</span> E50 <b>' + wan(vE) + ' 萬</b></div>';
       if (vH) html += '<div><span style="color:#1baf7a">●</span> 11.8% <b>' + wan(vH) + ' 萬</b></div>';
       tip.innerHTML = html;
