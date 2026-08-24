@@ -3785,9 +3785,14 @@
     if (a.d < T0) return null;
     const eAt = a.d <= END_E50 ? interp(e50C, a.d) : null;
     const hAt = interp(histC, a.d);
-    if (eAt && a.value >= eAt * 0.98) return { t: '✓ E50 在軌', c: '#047857', bg: 'rgba(5,150,105,0.12)' };
-    if (hAt && a.value >= hAt * 0.98) return { t: '△ E50 落後，基準在軌', c: '#b45309', bg: 'rgba(217,119,6,0.12)' };
-    return { t: '✕ 雙雙落後', c: '#dc2626', bg: 'rgba(220,38,38,0.10)' };
+    if (!hAt && !eAt) return null;
+    const pct = function(v, ref){ const d = (v / ref - 1) * 100; return (d >= 0 ? '＋' : '−') + Math.abs(d).toFixed(1) + '%'; };
+    if (eAt && a.value >= eAt * 0.98) return { t: '✓ E50 在軌（' + pct(a.value, eAt) + '）', c: '#047857', bg: 'rgba(5,150,105,0.12)' };
+    if (hAt && a.value >= hAt * 0.98) {
+      if (eAt) return { t: '△ 基準在軌（E50 ' + pct(a.value, eAt) + '）', c: '#b45309', bg: 'rgba(217,119,6,0.12)' };
+      return { t: '✓ 基準在軌（' + pct(a.value, hAt) + '）', c: '#047857', bg: 'rgba(5,150,105,0.12)' };
+    }
+    return { t: '✕ 雙雙落後（基準 ' + pct(a.value, hAt || eAt) + '）', c: '#dc2626', bg: 'rgba(220,38,38,0.10)' };
   }
 
   let lastAz = { clean: [], dropped: [], monthly: [] };
